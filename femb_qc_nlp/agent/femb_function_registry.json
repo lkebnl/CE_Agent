@@ -1,0 +1,85 @@
+{
+  "version": "2.0.0",
+  "description": "FEMB QC 系统完整指令注册表（Phase 1 + Phase 2）",
+
+  "layer0_init": {
+    "wib_ping":      {"nl_triggers": ["ping", "检查WIB", "WIB是否在线"], "params": {}},
+    "wib_time_sync": {"nl_triggers": ["同步时间", "sync time"], "params": {}},
+    "wib_startup":   {"nl_triggers": ["初始化WIB", "WIB startup", "启动WIB"], "params": {}},
+    "cfg_push":      {"nl_triggers": ["推送配置", "push config"], "params": {"operator": "str", "env": "RT|LN"}}
+  },
+
+  "layer1_power": {
+    "femb_power_on": {
+      "nl_triggers": ["上电", "打开FEMB", "power on", "turn on"],
+      "params": {"slots": "list[0-3]", "env": "RT|LN"}
+    },
+    "femb_power_off": {
+      "nl_triggers": ["断电", "关掉FEMB", "power off", "turn off"],
+      "params": {}
+    }
+  },
+
+  "layer2_acquire": {
+    "run_full_rms": {
+      "nl_triggers": ["完整RMS", "全量测试", "run full rms", "测所有配置", "item5"],
+      "params": {"slots": "list[0-3]", "operator": "str", "env": "RT|LN"},
+      "note": "Phase 1：调用 QC_top.py -t 5，采集全部32种配置"
+    },
+    "run_single_config": {
+      "nl_triggers": ["单配置", "指定配置采集", "run single", "只测这一种"],
+      "params": {
+        "slots": "list[0-3]",
+        "snc":  "200mV|900mV",
+        "gain": "4.7mV/fC|7.8mV/fC|14mV/fC|25mV/fC",
+        "peaking": "0.5us|1us|2us|3us",
+        "num_samples": "int"
+      },
+      "note": "Phase 2：调用原子脚本序列，只采目标配置"
+    },
+    "run_config_matrix": {
+      "nl_triggers": ["配置矩阵", "多种配置", "config matrix"],
+      "params": {
+        "slots": "list[0-3]",
+        "snc_list": "list[200mV|900mV]",
+        "gain_list": "list[...]",
+        "peaking_list": "list[...]"
+      }
+    }
+  },
+
+  "layer3_analysis": {
+    "analyze_from_manifest": {
+      "nl_triggers": ["分析", "analyze", "查看RMS", "看结果", "baseline是多少"],
+      "params": {
+        "femb_id": "int",
+        "snc_label": "200mV|900mV|null",
+        "gain_label": "str|null",
+        "peaking_label": "str|null",
+        "chips": "list[chip_id or silkscreen]|null",
+        "chip_channels": "dict|null",
+        "global_channels": "list[int]|null"
+      }
+    }
+  },
+
+  "param_synonyms": {
+    "snc": {
+      "200mV基线": "200mV", "200mVBL": "200mV", "低基线": "200mV",
+      "900mV基线": "900mV", "900mVBL": "900mV", "高基线": "900mV"
+    },
+    "gain": {
+      "14": "14mV/fC", "14mVfC": "14mV/fC",
+      "25": "25mV/fC", "7.8": "7.8mV/fC", "4.7": "4.7mV/fC"
+    },
+    "peaking": {
+      "2微秒": "2us", "0.5微秒": "0.5us", "1微秒": "1us", "3微秒": "3us"
+    },
+    "chip": {
+      "U3": "U03", "U7": "U07", "chip0": 0, "chip3": 3
+    },
+    "env": {
+      "液氮": "LN", "LN2": "LN", "冷测": "LN", "室温": "RT", "常温": "RT"
+    }
+  }
+}
