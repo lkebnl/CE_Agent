@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : CTS cryogenic UART communication interface
 """
 Created on Mon Sep  9 11:00:21 2019
 

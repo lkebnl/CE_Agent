@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : Trigger-primitive tools: generation, analysis, display
 from spymemory_decode import wib_spy_dec_syn
 import numpy as np
 import matplotlib.pyplot as plt

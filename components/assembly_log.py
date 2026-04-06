@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : Assembly QC log generation and management
 from collections import defaultdict
 ##### load logs and create report folder ######
 chkflag={"RMS":[],"BL":[],"Pulse_SE":{},"Pulse_DIFF":{},"PWR":[],"MON_T":[],"MON_BGP":[],"MON_ADC":{}}

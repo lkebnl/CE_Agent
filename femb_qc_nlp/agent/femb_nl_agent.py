@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : NL intent parsing via Ollama/Qwen3, action dispatch, and result summarisation
 """
 femb_nl_agent.py — Natural-language driven FEMB QC agent.
 
@@ -66,11 +73,12 @@ class FEMBNLAgent:
 
         # Intent → action mapping
         self._intent_map = {
-            "run_rms":     self._action_run_full_rms,
-            "run_single":  self._action_run_single_config,
-            "analyze_rms": self._action_analyze_rms,
-            "power_on":    self._action_power_on,
-            "power_off":   self._action_power_off,
+            "run_rms":         self._action_run_full_rms,
+            "run_single":      self._action_run_single_config,
+            "run_and_analyze": self._action_run_and_analyze,
+            "analyze_rms":     self._action_analyze_rms,
+            "power_on":        self._action_power_on,
+            "power_off":       self._action_power_off,
         }
 
     # ── Public API ─────────────────────────────────────────────────────────────
@@ -231,13 +239,15 @@ class FEMBNLAgent:
             "model":  self.model,
             "messages": messages,
             "stream": False,
+            "think":  False,   # disable qwen3 chain-of-thought thinking mode
             "options": {
                 "temperature": 0.1,  # low temperature for deterministic JSON output
+                "num_predict": 400,  # JSON response never exceeds ~300 tokens
             },
         }
         log.info("[Ollama] POST %s model=%s", self.api_url, self.model)
         try:
-            resp = requests.post(self.api_url, json=payload, timeout=120)
+            resp = requests.post(self.api_url, json=payload, timeout=300)
             resp.raise_for_status()
             data = resp.json()
             content = data.get("message", {}).get("content", "")
@@ -299,7 +309,7 @@ class FEMBNLAgent:
         """Execute single-configuration RMS acquisition."""
         slots   = params.get("fembs") or [0]
         env     = params.get("env") or "RT"
-        n_samp  = int(params.get("num_samples") or 10)
+        n_samp  = int(params.get("num_samples") or 5)
 
         # Convert human-readable labels to bit codes
         snc_label = params.get("snc")
@@ -325,6 +335,27 @@ class FEMBNLAgent:
         else:
             result["summary"] = "Single config acquisition FAILED. Check logs."
         return result
+
+    def _action_run_and_analyze(self, params):
+        """Acquire a single config then immediately analyze the result."""
+        # Step 1: acquire
+        acq = self._action_run_single_config(params)
+        if not acq.get("success"):
+            acq["summary"] = "Acquisition FAILED — skipping analysis. Check logs."
+            return acq
+
+        # Step 2: analyze using the manifest written during acquisition
+        print("\n[Agent] Acquisition done, starting analysis...")
+        analysis = self._action_analyze_rms(params)
+
+        # Merge summaries
+        analysis["summary"] = (
+            "[采集] {}\n[分析] {}".format(
+                acq.get("summary", ""),
+                analysis.get("summary", ""),
+            )
+        )
+        return analysis
 
     def _action_analyze_rms(self, params):
         """Analyze existing data using the manifest."""

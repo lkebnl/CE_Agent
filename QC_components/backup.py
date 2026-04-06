@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : QC component backup snapshot
 #   SE 900 mV
                 file.write('### SE OFF    Baseline 900 mV' + '\n')
                 log.check_log04_table_02[femb_id]['title'] = " | Gain | PeakTime | PPK Mean | PPK Error | NPK Mean | NPK Error |\n"

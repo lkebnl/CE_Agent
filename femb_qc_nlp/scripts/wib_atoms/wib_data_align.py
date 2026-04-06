@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : WIB-side atom script — WIB-FEMB data link alignment before acquisition
 """
 wib_data_align.py — Execute data link alignment for specified FEMB slots.
 

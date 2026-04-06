@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : WIB-side atom script — COLDATA reset for specified FEMB slots (runs on WIB via SSH)
 """
 wib_coldata_reset.py — Execute COLDATA reset on specified FEMB slots.
 

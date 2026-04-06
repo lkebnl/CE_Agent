@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : Local data decoding, RMS/pedestal computation, pass/fail check, and plotting
 """
 femb_analysis_lib.py — PC-local data analysis for FEMB QC NLP system.
 
@@ -527,6 +534,228 @@ def plot_rms_128ch(rms_result, config_label, save_path=None, show=False):
     plt.close(fig)
 
 
+def plot_pedestal(channels_data, femb_id, target_channels,
+                  config_label, save_path=None, show=False):
+    """
+    Two-panel pedestal plot for selected channels.
+
+    Top panel  — Time series: raw ADC samples vs sample index.
+                 X: sample index (0 … N-1)
+                 Y: ADC counts  [y_lo, y_hi] shared with bottom panel
+    Bottom panel — Histogram: ADC count distribution (pedestal shape).
+                 X: ADC counts  [x_lo, x_hi]
+                 Y: Entries     [0, max_count × 1.15]
+
+    Layout
+    ------
+    ≤ 16 channels : all channels overlaid on a single column of two panels.
+    > 16 channels : one column of two panels per channel (4 columns across).
+
+    Y-axis (ADC counts) limits — same for both panels:
+      y_lo = min(ped_min across all channels) − 3 × rms_max
+      y_hi = max(ped_max across all channels) + 3 × rms_max
+      (at least ±50 ADC counts around the group mean)
+
+    Parameters
+    ----------
+    channels_data : dict
+        Output of decode_to_channels(): {femb_id: {ch: np.ndarray}}.
+    femb_id : int
+        FEMB slot index.
+    target_channels : list
+        Sorted list of global channel numbers to plot.
+    config_label : str
+        Plot title label, e.g. "200mV_14mVfC_2us".
+    save_path : str or None
+        File path to save. None = do not save.
+    show : bool
+        Display figure interactively.
+    """
+    try:
+        import matplotlib
+        if not show:
+            matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+    except ImportError:
+        log.warning("matplotlib not available — skipping pedestal plot.")
+        return
+
+    # ── Extract raw channel arrays ──────────────────────────────────────────────
+    if femb_id in channels_data and isinstance(channels_data[femb_id], dict):
+        ch_data = channels_data[femb_id]
+    else:
+        ch_data = channels_data
+
+    valid_chs = [ch for ch in target_channels
+                 if ch in ch_data and len(ch_data[ch]) > 0]
+    if not valid_chs:
+        log.warning("[plot_pedestal] No valid channel data for channels %s", target_channels)
+        return
+
+    n_ch = len(valid_chs)
+    colors = (list(cm.tab20.colors) if n_ch <= 20
+              else list(cm.hsv(np.linspace(0, 1, n_ch, endpoint=False))))
+
+    # ── Pre-compute stats for axis limits ──────────────────────────────────────
+    all_peds     = []
+    all_rms      = []
+    all_ped_min  = []
+    all_ped_max  = []
+    for ch in valid_chs:
+        arr = ch_data[ch].astype(np.float64)
+        all_peds.append(float(np.mean(arr)))
+        all_rms.append(float(np.std(arr)))
+        all_ped_min.append(float(np.min(arr)))
+        all_ped_max.append(float(np.max(arr)))
+
+    group_ped_mean = float(np.mean(all_peds))
+    rms_max        = max(all_rms) if all_rms else 1.0
+    margin         = max(3.0 * rms_max, 50.0)
+
+    # Shared Y axis (ADC counts) for both panels
+    y_lo = min(all_ped_min) - margin
+    y_hi = max(all_ped_max) + margin
+
+    # Histogram X axis (same as Y axis of time-series for easy visual mapping)
+    x_lo_hist = y_lo
+    x_hi_hist = y_hi
+
+    # Histogram bins
+    n_bins    = min(200, max(50, int((x_hi_hist - x_lo_hist))))
+    bin_edges = np.linspace(x_lo_hist, x_hi_hist, n_bins + 1)
+
+    per_ch_counts  = {}
+    global_max_cnt = 0
+    for ch in valid_chs:
+        arr = ch_data[ch].astype(np.float64)
+        counts, _ = np.histogram(arr, bins=bin_edges)
+        per_ch_counts[ch] = counts
+        global_max_cnt = max(global_max_cnt, int(counts.max()))
+
+    hist_y_hi = int(global_max_cnt * 1.15) + 1
+
+    # ── Build figure layout ─────────────────────────────────────────────────────
+    use_cols = n_ch > 16
+    if use_cols:
+        n_cols   = 4
+        n_groups = (n_ch + n_cols - 1) // n_cols
+        fig, axes = plt.subplots(
+            2 * n_groups, n_cols,
+            figsize=(4 * n_cols, 5 * n_groups),
+        )
+        # axes[row, col]: rows 0,1 → group0 (ts, hist); rows 2,3 → group1; …
+    else:
+        fig, axes = plt.subplots(
+            2, 1,
+            figsize=(12, 7),
+            gridspec_kw={"height_ratios": [2, 1]},
+        )
+
+    fig.suptitle(
+        "Pedestal — {} — FEMB{}".format(config_label, femb_id),
+        fontsize=12, y=1.01,
+    )
+
+    def _draw_pair(ax_ts, ax_hist, ch, color):
+        """Draw time-series and histogram for one channel onto given axes."""
+        arr = ch_data[ch].astype(np.float64)
+        chip_id  = ch // 16
+        silk, ch_start, _ = CHIP_CHANNEL_MAP[chip_id]
+        chip_chn = ch - ch_start
+        ped_val  = float(np.mean(arr))
+        rms_val  = float(np.std(arr))
+        ch_label = "ch{} {} pin{}  ped={:.1f}  rms={:.2f}".format(
+            ch, silk, chip_chn, ped_val, rms_val)
+
+        # Time-series
+        ax_ts.plot(arr, color=color, linewidth=0.6, alpha=0.85)
+        ax_ts.axhline(ped_val, color=color, linewidth=0.8,
+                      linestyle="--", alpha=0.6)
+        ax_ts.set_ylim(y_lo, y_hi)
+        ax_ts.set_ylabel("ADC counts", fontsize=8)
+        ax_ts.set_xlabel("Sample index", fontsize=8)
+        ax_ts.tick_params(labelsize=7)
+        ax_ts.set_title(ch_label, fontsize=8, loc="left")
+        ax_ts.grid(axis="y", alpha=0.25)
+
+        # Histogram
+        counts = per_ch_counts[ch]
+        ax_hist.step(bin_edges[:-1], counts, where="post",
+                     color=color, linewidth=1.0, alpha=0.85)
+        ax_hist.set_xlim(x_lo_hist, x_hi_hist)
+        ax_hist.set_ylim(0, hist_y_hi)
+        ax_hist.set_xlabel("ADC counts", fontsize=8)
+        ax_hist.set_ylabel("Entries", fontsize=8)
+        ax_hist.tick_params(labelsize=7)
+        ax_hist.grid(axis="y", alpha=0.25)
+
+    if use_cols:
+        for idx, ch in enumerate(valid_chs):
+            group = idx // n_cols
+            col   = idx % n_cols
+            row_ts   = group * 2
+            row_hist = group * 2 + 1
+            _draw_pair(axes[row_ts, col], axes[row_hist, col],
+                       ch, colors[idx % len(colors)])
+
+        # Hide unused panels
+        total_pairs = n_groups * n_cols
+        for spare in range(n_ch, total_pairs):
+            group = spare // n_cols
+            col   = spare % n_cols
+            axes[group * 2,     col].set_visible(False)
+            axes[group * 2 + 1, col].set_visible(False)
+
+    else:
+        ax_ts, ax_hist = axes[0], axes[1]
+        for idx, ch in enumerate(valid_chs):
+            color = colors[idx % len(colors)]
+            arr   = ch_data[ch].astype(np.float64)
+            chip_id  = ch // 16
+            silk, ch_start, _ = CHIP_CHANNEL_MAP[chip_id]
+            chip_chn = ch - ch_start
+            ped_val  = float(np.mean(arr))
+            rms_val  = float(np.std(arr))
+            ch_label = "ch{} {} pin{}  ped={:.1f}  rms={:.2f}".format(
+                ch, silk, chip_chn, ped_val, rms_val)
+
+            # Time-series (all channels overlaid)
+            ax_ts.plot(arr, color=color, linewidth=0.7,
+                       alpha=0.8, label=ch_label)
+            ax_ts.axhline(ped_val, color=color, linewidth=0.8,
+                          linestyle="--", alpha=0.5)
+
+            # Histogram (all channels overlaid)
+            counts = per_ch_counts[ch]
+            ax_hist.step(bin_edges[:-1], counts, where="post",
+                         color=color, linewidth=1.1, alpha=0.85,
+                         label=ch_label)
+
+        ax_ts.set_ylim(y_lo, y_hi)
+        ax_ts.set_ylabel("ADC counts", fontsize=10)
+        ax_ts.set_xlabel("Sample index", fontsize=10)
+        ax_ts.legend(fontsize=7, loc="upper right")
+        ax_ts.grid(axis="y", alpha=0.25)
+
+        ax_hist.set_xlim(x_lo_hist, x_hi_hist)
+        ax_hist.set_ylim(0, hist_y_hi)
+        ax_hist.set_xlabel("ADC counts", fontsize=10)
+        ax_hist.set_ylabel("Entries", fontsize=10)
+        ax_hist.legend(fontsize=7, loc="upper right")
+        ax_hist.grid(axis="y", alpha=0.25)
+
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        log.info("[plot_pedestal] Saved → %s", save_path)
+
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def plot_rms_compare(results_dict, save_path=None, show=False):
     """
     Overlay RMS distributions for multiple configurations.
@@ -707,13 +936,26 @@ def analyze_from_manifest(manifest_path, femb_id,
         rms_results_for_plot[config_label] = rms_result
 
         if plot:
-            plot_path = os.path.join(
-                save_dir, "rms_{}.png".format(config_label.replace("/", "_"))
-            )
-            plot_rms_128ch(rms_result, config_label, save_path=plot_path)
+            label_safe = config_label.replace("/", "_")
 
-    # Comparison plot when multiple configs were matched
-    if plot and len(rms_results_for_plot) > 1:
+            if target_channels is not None:
+                # Channel subset selected → pedestal histogram plot
+                ped_path = os.path.join(
+                    save_dir, "pedestal_{}.png".format(label_safe)
+                )
+                plot_pedestal(
+                    channels_data, femb_id, target_channels,
+                    config_label, save_path=ped_path,
+                )
+            else:
+                # All channels → standard 128-ch RMS overview
+                plot_path = os.path.join(
+                    save_dir, "rms_{}.png".format(label_safe)
+                )
+                plot_rms_128ch(rms_result, config_label, save_path=plot_path)
+
+    # Comparison plot when multiple configs matched and no channel subset selected
+    if plot and len(rms_results_for_plot) > 1 and target_channels is None:
         compare_path = os.path.join(save_dir, "rms_compare.png")
         plot_rms_compare(rms_results_for_plot, save_path=compare_path)
 

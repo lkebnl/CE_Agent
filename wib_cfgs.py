@@ -1,3 +1,10 @@
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : WIB configuration class: firmware init, FE/ADC register writes
 from llc import LLC
 from fe_asic_reg_mapping import FE_ASIC_REG_MAPPING
 import copy

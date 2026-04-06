@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# Author      : Lingyun Ke
+# Email       : lingyun.lke@gmail.com
+# Created     : 2026-04-05
+# Project     : DUNE CE WIB FEMB QC — NLP-Driven Test System
+# Institution : BNL (Brookhaven National Laboratory)
+# Version     : 1.0.0
+# Description : Item-12 SSH key copy and deployment utility
 """
 setup_all_remotes.py
 Run copy_ssh_key.sh for all remote hosts
