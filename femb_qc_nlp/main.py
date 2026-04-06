@@ -15,8 +15,15 @@ import os
 # `from core.xxx import ...` and `from agent.xxx import ...` work when
 # main.py is invoked from any working directory.
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_PARENT = os.path.dirname(_HERE)   # BNL_CE_WIB_SW_QC/ — contains spymemory_decode, QC_check, etc.
+
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
+if _PARENT not in sys.path:
+    sys.path.insert(0, _PARENT)
+
+# Always run from the project root so relative paths (./scripts, ./data, etc.) work
+os.chdir(_HERE)
 
 from agent.femb_nl_agent import FEMBNLAgent
 

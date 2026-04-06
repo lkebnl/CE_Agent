@@ -1,0 +1,28 @@
+{
+  "created_at": "2026-04-05 20:44:49",
+  "pc_data_dir": "./data/20260405_204238",
+  "fembs": [
+    3
+  ],
+  "operator": "",
+  "env": "",
+  "acquisitions": [
+    {
+      "file": "RMS_SE_200mVBL_14_0mVfC_2_0us_0x00.bin",
+      "config": {
+        "mode": "SE",
+        "snc": 1,
+        "snc_label": "200mV",
+        "sg0": 0,
+        "sg1": 0,
+        "gain_label": "14mV/fC",
+        "st0": 1,
+        "st1": 1,
+        "peaking_label": "2us",
+        "dac": "0x00"
+      },
+      "num_samples": 10,
+      "timestamp": "2026-04-05 20:44:49"
+    }
+  ]
+}

@@ -37,23 +37,40 @@ SSH_CMD_DIR = "./ssh_commands"
 
 # ── SSH command saving ──────────────────────────────────────────────────────────
 
-def save_ssh_commands(steps, config, local_data_dir, output_fname):
+def save_ssh_commands(steps, config, local_data_dir, output_fname,
+                      init_steps=None, power_steps=None, config_csv=None,
+                      power_off=False):
     """
-    Save the assembled SSH/SCP command sequence to a local shell script file.
+    Save the complete SSH/SCP command sequence to a local shell script file.
 
-    The saved file can be reviewed, edited, and replayed manually or via
-    replay_ssh_commands().
+    Records every stage in execution order so the file is a full,
+    reproducible record of one acquisition run:
+
+      Section 0 — WIB Initialisation  (init_steps, optional)
+      Section 1 — FEMB Power-On       (power_steps, optional)
+      Section 2 — Atom scripts        (steps, always present)
+      Section 3 — Pull QC data        (SCP from WIB)
+      Section 4 — Clean WIB data      (rm on WIB)
 
     Parameters
     ----------
     steps : list of (cmd_str, timeout_int)
-        SSH command strings as assembled for run_single_config().
+        Atom-script SSH commands (wib_coldata_reset … wib_acquire).
     config : dict
         Config dict (snc_label, gain_label, peaking_label, etc.).
     local_data_dir : str
         Local data directory used for SCP pull.
     output_fname : str
         Expected output .bin filename on WIB.
+    init_steps : list of (cmd_str, timeout_int) or None
+        WIB-initialisation SSH commands (time-sync, startup).
+        Pass None to omit this section.
+    power_steps : list of (cmd_str, timeout_int) or None
+        FEMB power-on SSH commands.
+        Pass None to omit this section.
+    config_csv : str or None
+        Local config CSV that was SCP-pushed during init.
+        If provided, a scp push line is appended to the init section.
 
     Returns
     -------
@@ -76,16 +93,50 @@ def save_ssh_commands(steps, config, local_data_dir, output_fname):
     lines.append("# 输出文件  : {}".format(output_fname))
     lines.append("# 本地目录  : {}".format(local_data_dir))
     lines.append("# ──────────────────────────────────────────────────────────")
+
+    # Section 0: WIB Initialisation
+    if init_steps:
+        lines.append("")
+        lines.append("# ── Section 0: WIB 初始化 (time sync + startup) ──────────────")
+        for cmd, timeout in init_steps:
+            lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
+        if config_csv and os.path.isfile(config_csv):
+            basename = os.path.basename(config_csv)
+            remote = "{}/{}".format(WIB_WORKDIR, basename)
+            lines.append('scp -r {} {}:{}  # config push'.format(config_csv, WIB_HOST, remote))
+            lines.append('scp -r {}:{} ./readback/{}  # config verify'.format(
+                WIB_HOST, remote, basename))
+
+    # Section 1: FEMB Power-On
+    if power_steps:
+        lines.append("")
+        lines.append("# ── Section 1: FEMB 上电 ─────────────────────────────────────")
+        for cmd, timeout in power_steps:
+            lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
+
+    # Section 2: Atom scripts
     lines.append("")
-    lines.append("# Step 1~5: 原子脚本（在 WIB 上执行）")
+    lines.append("# ── Section 2: 原子脚本 (coldata_reset → autocali → fe_cfg → align → acquire) ──")
     for cmd, timeout in steps:
         lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
+
+    # Section 3: Pull QC data
     lines.append("")
-    lines.append("# Step 6: 拉取数据到本地")
+    lines.append("# ── Section 3: 拉取数据到本地 ───────────────────────────────────")
     lines.append('scp -r {}:{} {}'.format(WIB_HOST, WIB_QC_DIR + "/", local_data_dir))
+
+    # Section 4: Clean WIB
     lines.append("")
-    lines.append("# Step 7: 清理 WIB 临时数据")
+    lines.append("# ── Section 4: 清理 WIB 临时数据 ────────────────────────────────")
     lines.append('ssh {} "rm -rf {}"'.format(WIB_HOST, WIB_QC_DIR))
+
+    # Section 5: Power-off
+    if power_off:
+        lines.append("")
+        lines.append("# ── Section 5: FEMB 下电 ─────────────────────────────────────")
+        lines.append('ssh {} "cd {d}; python3 top_femb_powering.py off off off off"  # timeout=60s'.format(
+            WIB_HOST, d=WIB_WORKDIR))
+
     lines.append("")
 
     with open(fpath, "w", encoding="utf-8") as fh:
@@ -397,13 +448,13 @@ def wib_startup():
     return success
 
 
-def cfg_push(local_csv="./config/femb_info.csv"):
+def cfg_push(local_csv="./config/femb_info_implement.csv"):
     """
-    Push femb_info.csv to the WIB and verify via readback comparison.
+    Push a femb config CSV to the WIB and verify via readback comparison.
 
     Steps:
-      1. SCP local_csv → WIB
-      2. SCP readback → ./readback/femb_info.csv
+      1. SCP local_csv → WIB (remote filename matches local basename)
+      2. SCP readback → ./readback/<basename>
       3. filecmp comparison
 
     Returns
@@ -411,13 +462,14 @@ def cfg_push(local_csv="./config/femb_info.csv"):
     bool
         True when the pushed and read-back files are identical.
     """
-    remote_path = "{workdir}/femb_info.csv".format(workdir=WIB_WORKDIR)
+    basename = os.path.basename(local_csv)
+    remote_path = "{workdir}/{fname}".format(workdir=WIB_WORKDIR, fname=basename)
     if not _scp_to_wib(local_csv, remote_path):
         return False
 
     readback_dir = "./readback"
     os.makedirs(readback_dir, exist_ok=True)
-    readback_path = os.path.join(readback_dir, "femb_info.csv")
+    readback_path = os.path.join(readback_dir, basename)
     if not _scp_from_wib(remote_path, readback_path):
         return False
 
@@ -427,11 +479,66 @@ def cfg_push(local_csv="./config/femb_info.csv"):
     return match
 
 
+def wib_init(config_csv=None):
+    """
+    Run the full WIB initialisation sequence (equivalent to QC_TST_EN==0 block).
+
+    Steps:
+      1. Time sync  — set WIB clock to current PC UTC time.
+      2. WIB startup — run wib_startup.py on the WIB.
+      3. Config push — SCP config CSV to WIB and verify readback.
+
+    Must be called once per test session, **before** any acquisition
+    (i.e. before wib_coldata_reset / wib_adc_autocali).
+
+    Parameters
+    ----------
+    config_csv : str or None
+        Local path to the femb config CSV.
+        Defaults to ./config/femb_info_implement.csv.
+
+    Returns
+    -------
+    bool
+        True when all three steps succeed.
+    """
+    if config_csv is None:
+        config_csv = "./config/femb_info_implement.csv"
+
+    log.info("[wib_init] Step 1/3 — time sync")
+    if not wib_time_sync():
+        log.error("[wib_init] Time sync FAILED")
+        return False
+
+    log.info("[wib_init] Step 2/3 — WIB startup")
+    if not wib_startup():
+        log.error("[wib_init] WIB startup FAILED")
+        return False
+
+    log.info("[wib_init] Step 3/3 — config push & verify")
+    if not os.path.isfile(config_csv):
+        log.warning("[wib_init] Config CSV not found, skipping push: %s", config_csv)
+    elif not cfg_push(config_csv):
+        log.error("[wib_init] Config push/verify FAILED")
+        return False
+
+    log.info("[wib_init] Initialization complete")
+    return True
+
+
 # ── Layer 1: Power Control ─────────────────────────────────────────────────────
 
 def femb_power_on(slots, env="RT"):
     """
     Power on the specified FEMB slots.
+
+    Mirrors run_femb_powering() in cts_ssh_FEMB.py:
+      - LN mode: run top_femb_powering_LN.py first, sleep 2s, then
+                 run top_femb_powering.py (both are always executed in LN).
+      - RT mode: run top_femb_powering.py only.
+
+    Slot-connection status is parsed from the top_femb_powering.py stdout
+    (``SLOT#N Power Connection Normal`` marker).
 
     Parameters
     ----------
@@ -443,20 +550,33 @@ def femb_power_on(slots, env="RT"):
     Returns
     -------
     dict
-        {'success': bool, 'slot_status': {0: bool, ...}, 'stdout': str}
+        {
+          'success':     bool,
+          'slot_status': {slot_int: bool, ...},
+          'stdout':      str,   # from top_femb_powering.py
+          'ln_stdout':   str,   # from top_femb_powering_LN.py (empty if RT)
+        }
     """
+    import time as _time
     slot_args = _make_slot_args(slots)
-    if env == "LN":
-        script = "top_femb_powering_LN.py"
-    else:
-        script = "top_femb_powering.py"
+    ln_stdout = ""
 
-    cmd = "cd {workdir}; python3 {script} {args}".format(
-        workdir=WIB_WORKDIR, script=script, args=slot_args
-    )
-    result = _ssh_run(cmd, timeout=150)
+    # LN pre-step: top_femb_powering_LN.py
+    if env == "LN":
+        log.info("[femb_power_on] LN mode — running top_femb_powering_LN.py")
+        ln_cmd = "cd {d}; python3 top_femb_powering_LN.py {a}".format(
+            d=WIB_WORKDIR, a=slot_args)
+        ln_res = _ssh_run(ln_cmd, timeout=120)
+        ln_stdout = ln_res.stdout if ln_res else ""
+        _time.sleep(2)
+
+    # Always run top_femb_powering.py for slot-connection check
+    cmd = "cd {d}; python3 top_femb_powering.py {a}".format(
+        d=WIB_WORKDIR, a=slot_args)
+    result = _ssh_run(cmd, timeout=120)
     if result is None:
-        return {"success": False, "slot_status": {s: False for s in slots}, "stdout": ""}
+        return {"success": False, "slot_status": {s: False for s in slots},
+                "stdout": "", "ln_stdout": ln_stdout}
 
     slot_status = {}
     for s in slots:
@@ -468,6 +588,7 @@ def femb_power_on(slots, env="RT"):
         "success":     overall,
         "slot_status": slot_status,
         "stdout":      result.stdout,
+        "ln_stdout":   ln_stdout,
     }
 
 
@@ -525,17 +646,32 @@ def push_atoms_to_wib():
     """
     SCP all atom scripts from scripts/wib_atoms/ to WIB atoms directory.
 
+    Copies each .py file individually so files land directly in
+    WIB_ATOMS_DIR/ rather than in a subdirectory.
+
     Returns
     -------
     bool
         True on success.
     """
-    local_atoms = "./scripts/wib_atoms/"
-    remote_atoms = WIB_ATOMS_DIR + "/"
+    local_atoms_dir = "./scripts/wib_atoms"
     # Ensure remote directory exists
-    mkdir_cmd = "mkdir -p {dir}".format(dir=WIB_ATOMS_DIR)
-    _ssh_run(mkdir_cmd, timeout=10)
-    return _scp_to_wib(local_atoms, remote_atoms, timeout=60)
+    _ssh_run("mkdir -p {dir}".format(dir=WIB_ATOMS_DIR), timeout=10)
+
+    py_files = [
+        f for f in os.listdir(local_atoms_dir) if f.endswith(".py")
+    ]
+    if not py_files:
+        log.warning("[push_atoms] No .py files found in %s", local_atoms_dir)
+        return False
+
+    success = True
+    for fname in py_files:
+        local_path = os.path.join(local_atoms_dir, fname)
+        remote_path = WIB_ATOMS_DIR + "/" + fname
+        if not _scp_to_wib(local_path, remote_path, timeout=30):
+            success = False
+    return success
 
 
 def run_full_rms(slots, operator, env="RT", local_data_dir=None):
@@ -567,10 +703,12 @@ def run_full_rms(slots, operator, env="RT", local_data_dir=None):
     # Build femb_ids dict with placeholder IDs
     femb_ids = {"femb{}".format(s): "FEMB-00{}".format(s) for s in slots}
 
-    # Prepare and push config CSV
+    # Write config CSV, then run full WIB init (time sync + startup + config push)
     _write_femb_info_csv(slots=slots, operator=operator, env=env,
-                         femb_ids=femb_ids, out_path="./config/femb_info.csv")
-    cfg_push()
+                         femb_ids=femb_ids, out_path="./config/femb_info_implement.csv")
+    if not wib_init("./config/femb_info_implement.csv"):
+        return {"success": False, "data_dir": local_data_dir,
+                "manifest_path": "", "configs": []}
 
     # Build stdin for interactive QC_top.py / QC_runs
     slot_args = " ".join(str(s) for s in slots)
@@ -607,14 +745,27 @@ def run_full_rms(slots, operator, env="RT", local_data_dir=None):
 
 
 def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
-                      num_samples=10, local_data_dir=None):
+                      num_samples=5, local_data_dir=None,
+                      do_init=True, config_csv=None,
+                      do_power=True, env="RT"):
     """
     Execute a single-configuration RMS acquisition using atom scripts.
+
+    Full session sequence when do_init=True and do_power=True:
+      0. WIB init  — time sync + wib_startup.py + config push
+      1. Power-on  — top_femb_powering[_LN].py for given slots
+      2. Atom steps — coldata_reset → adc_autocali → fe_configure
+                      → data_align → acquire
+      3. Pull data  — SCP QC dir to local
+      4. Clean WIB  — rm QC dir
+      5. Power-off  — top_femb_powering.py off off off off
+
+    All steps are recorded in the saved SSH command script.
 
     Parameters
     ----------
     slots : list
-        FEMB slots to use.
+        FEMB slots to use, e.g. [0, 3].
     snc : int
         Baseline code (0=900mV, 1=200mV).
     sg0, sg1 : int
@@ -627,6 +778,16 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
         Number of spy-buffer samples.
     local_data_dir : str or None
         Local data directory. Auto-generated if None.
+    do_init : bool
+        Run WIB init (time sync + startup + config push) before acquisition.
+        Pass False when run_config_matrix() has already done this.
+    config_csv : str or None
+        Path to the femb config CSV, forwarded to wib_init().
+    do_power : bool
+        Execute femb_power_on() before acquisition and femb_power_off()
+        after. Pass False when run_config_matrix() manages power externally.
+    env : str
+        "RT" or "LN" — controls which power script to call.
 
     Returns
     -------
@@ -637,40 +798,64 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
         local_data_dir = _make_data_dir()
     os.makedirs(local_data_dir, exist_ok=True)
 
-    # Push atom scripts
-    push_atoms_to_wib()
-
     slot_list = " ".join(str(s) for s in slots)
     output_fname = generate_filename(mode, snc, sg0, sg1, st0, st1)
+    py = "cd {d}; PYTHONPATH={d}".format(d=WIB_WORKDIR)
+
+    # ── Build all step lists ────────────────────────────────────────────────────
+
+    _init_steps = None
+    if do_init:
+        utc_str = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        _init_steps = [
+            ("date -s '{}'".format(utc_str), 15),
+            ("cd {d}; python3 wib_startup.py".format(d=WIB_WORKDIR), 60),
+        ]
+
+    _power_steps = None
+    if do_power:
+        pwr_args = _make_slot_args(slots)
+        _power_steps = []
+        if env == "LN":
+            _power_steps.append((
+                "cd {d}; python3 top_femb_powering_LN.py {a}".format(
+                    d=WIB_WORKDIR, a=pwr_args),
+                120
+            ))
+        _power_steps.append((
+            "cd {d}; python3 top_femb_powering.py {a}".format(
+                d=WIB_WORKDIR, a=pwr_args),
+            120
+        ))
 
     steps = [
         (
-            "cd {d}; python3 {a}/wib_coldata_reset.py {s}".format(
-                d=WIB_WORKDIR, a=WIB_ATOMS_DIR, s=slot_list),
+            "{py} python3 {a}/wib_coldata_reset.py {s}".format(
+                py=py, a=WIB_ATOMS_DIR, s=slot_list),
             30
         ),
         (
-            "cd {d}; python3 {a}/wib_adc_autocali.py {s}".format(
-                d=WIB_WORKDIR, a=WIB_ATOMS_DIR, s=slot_list),
+            "{py} python3 {a}/wib_adc_autocali.py {s}".format(
+                py=py, a=WIB_ATOMS_DIR, s=slot_list),
+            120
+        ),
+        (
+            "{py} python3 {a}/wib_fe_configure.py {s} "
+            "--snc {snc} --sg0 {sg0} --sg1 {sg1} "
+            "--st0 {st0} --st1 {st1}".format(
+                py=py, a=WIB_ATOMS_DIR, s=slot_list,
+                snc=snc, sg0=sg0, sg1=sg1, st0=st0, st1=st1),
             60
         ),
         (
-            "cd {d}; python3 {a}/wib_fe_configure.py {s} "
-            "--snc {snc} --sg0 {sg0} --sg1 {sg1} "
-            "--st0 {st0} --st1 {st1}".format(
-                d=WIB_WORKDIR, a=WIB_ATOMS_DIR, s=slot_list,
-                snc=snc, sg0=sg0, sg1=sg1, st0=st0, st1=st1),
-            60  # has sleep(10) inside; add extra margin
-        ),
-        (
-            "cd {d}; python3 {a}/wib_data_align.py {s}".format(
-                d=WIB_WORKDIR, a=WIB_ATOMS_DIR, s=slot_list),
+            "{py} python3 {a}/wib_data_align.py {s}".format(
+                py=py, a=WIB_ATOMS_DIR, s=slot_list),
             30
         ),
         (
-            "cd {d}; python3 {a}/wib_acquire.py {s} "
+            "{py} python3 {a}/wib_acquire.py {s} "
             "--samples {n} --output {out}".format(
-                d=WIB_WORKDIR, a=WIB_ATOMS_DIR, s=slot_list,
+                py=py, a=WIB_ATOMS_DIR, s=slot_list,
                 n=num_samples, out=output_fname),
             120
         ),
@@ -689,10 +874,34 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
         "dac":           "0x00",
     }
 
-    # Save SSH command sequence to local file before executing
-    cmd_file = save_ssh_commands(steps, config, local_data_dir, output_fname)
+    # ── Save complete command sequence FIRST, before any execution ─────────────
+    cmd_file = save_ssh_commands(
+        steps, config, local_data_dir, output_fname,
+        init_steps=_init_steps,
+        power_steps=_power_steps,
+        config_csv=config_csv,
+        power_off=do_power,
+    )
     log.info("[run_single_config] SSH命令已保存: %s", cmd_file)
 
+    # ── Step 0: WIB initialisation ─────────────────────────────────────────────
+    if do_init:
+        if not wib_init(config_csv):
+            return {"success": False, "data_dir": local_data_dir,
+                    "file": "", "config": {}}
+
+    # ── Step 1: FEMB power-on ──────────────────────────────────────────────────
+    if do_power:
+        pwr = femb_power_on(slots, env=env)
+        if not pwr["success"]:
+            log.error("[run_single_config] Power-on failed: %s", pwr["slot_status"])
+            return {"success": False, "data_dir": local_data_dir,
+                    "file": "", "config": {}}
+
+    # Push atom scripts to WIB
+    push_atoms_to_wib()
+
+    # ── Step 2: Atom scripts ───────────────────────────────────────────────────
     overall_success = True
     for step_cmd, step_timeout in steps:
         res = _ssh_run(step_cmd, timeout=step_timeout)
@@ -701,8 +910,13 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
             overall_success = False
             break
 
+    # ── Step 3+4: Pull data and clean WIB ─────────────────────────────────────
     pull_qc_data(local_data_dir)
     clean_wib_data()
+
+    # ── Step 5: FEMB power-off ─────────────────────────────────────────────────
+    if do_power:
+        femb_power_off()
 
     manifest = create_manifest(
         data_dir=local_data_dir, fembs=slots, operator="", env=""
@@ -718,9 +932,16 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
 
 
 def run_config_matrix(slots, snc_list, gain_list, peaking_list,
-                      num_samples=10, local_data_dir=None):
+                      num_samples=5, local_data_dir=None, config_csv=None,
+                      env="RT"):
     """
     Execute a matrix of configurations by calling run_single_config() for each.
+
+    Session order:
+      1. wib_init()       — once
+      2. femb_power_on()  — once
+      3. run_single_config() × N  — do_init=False, do_power=False each time
+      4. femb_power_off() — once
 
     Parameters
     ----------
@@ -736,6 +957,10 @@ def run_config_matrix(slots, snc_list, gain_list, peaking_list,
         Spy-buffer samples per configuration.
     local_data_dir : str or None
         Local data directory. Auto-generated if None.
+    config_csv : str or None
+        Path to the femb config CSV, forwarded to wib_init().
+    env : str
+        "RT" or "LN".
 
     Returns
     -------
@@ -745,6 +970,20 @@ def run_config_matrix(slots, snc_list, gain_list, peaking_list,
     if local_data_dir is None:
         local_data_dir = _make_data_dir()
     os.makedirs(local_data_dir, exist_ok=True)
+
+    # Step 0: WIB initialisation — once for the whole matrix
+    log.info("[run_config_matrix] Step 0 — WIB initialisation")
+    if not wib_init(config_csv):
+        return {"success": False, "data_dir": local_data_dir,
+                "configs_run": [], "manifest_path": ""}
+
+    # Step 1: FEMB power-on — once for the whole matrix
+    log.info("[run_config_matrix] Step 1 — FEMB power-on slots=%s env=%s", slots, env)
+    pwr = femb_power_on(slots, env=env)
+    if not pwr["success"]:
+        log.error("[run_config_matrix] Power-on failed: %s", pwr["slot_status"])
+        return {"success": False, "data_dir": local_data_dir,
+                "configs_run": [], "manifest_path": ""}
 
     configs_run = []
     any_fail = False
@@ -762,6 +1001,9 @@ def run_config_matrix(slots, snc_list, gain_list, peaking_list,
                     snc=snc, sg0=sg0, sg1=sg1, st0=st0, st1=st1,
                     num_samples=num_samples,
                     local_data_dir=local_data_dir,
+                    do_init=False,
+                    do_power=False,
+                    env=env,
                 )
                 configs_run.append({
                     "snc_label":     snc_label,
@@ -772,6 +1014,10 @@ def run_config_matrix(slots, snc_list, gain_list, peaking_list,
                 })
                 if not res["success"]:
                     any_fail = True
+
+    # Step 2: FEMB power-off — once after all configs
+    log.info("[run_config_matrix] Step 2 — FEMB power-off")
+    femb_power_off()
 
     manifest_path = os.path.join(local_data_dir, "acquisition_manifest.json")
     return {
