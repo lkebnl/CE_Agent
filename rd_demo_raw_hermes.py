@@ -10,12 +10,6 @@ import numpy as np
 import pickle
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-from scipy.fft import fft, fftfreq
-import time, datetime, random, statistics
-import matplotlib.pyplot as plt
-import copy
-from mpl_toolkits.mplot3d import Axes3D
-import struct
 from spymemory_decode import wib_dec
 
 fp = sys.argv[1]
