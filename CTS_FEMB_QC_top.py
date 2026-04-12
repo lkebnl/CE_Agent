@@ -794,13 +794,13 @@ if 1 in state_list:
             print(Fore.YELLOW + "         (Enter 'Y' for Yes, 'EMPTY' or 'N' if this slot will be empty)" + Style.RESET_ALL)
             slot_input = input(Fore.YELLOW + '         >> ' + Style.RESET_ALL).strip().upper()
 
-            if slot_input in ['Y', 'YES', 'EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '空', '']:
+            if slot_input in ['Y', 'YES', 'EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', 'EMPTY', '']:
                 slot_status = slot_input
                 break
             else:
                 print_status('error', "         Invalid input. Please enter 'Y', 'EMPTY', or 'N'")
 
-        if slot_status in ['EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '空', '']:
+        if slot_status in ['EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '']:
             # Slot is empty - skip assembly data collection
             femb_id_0 = 'EMPTY'
             bottom_assembly_data = {
@@ -946,13 +946,13 @@ if 1 in state_list:
             print(Fore.YELLOW + "         (Enter 'Y' for Yes, 'EMPTY' or 'N' if this slot will be empty)" + Style.RESET_ALL)
             slot_input = input(Fore.YELLOW + '         >> ' + Style.RESET_ALL).strip().upper()
 
-            if slot_input in ['Y', 'YES', 'EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '空', '']:
+            if slot_input in ['Y', 'YES', 'EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', 'EMPTY', '']:
                 slot_status = slot_input
                 break
             else:
                 print_status('error', "         Invalid input. Please enter 'Y', 'EMPTY', or 'N'")
 
-        if slot_status in ['EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '空', '']:
+        if slot_status in ['EMPTY', 'NONE', 'N', 'NO', 'N/A', 'NA', '']:
             # Slot is empty - skip assembly data collection
             femb_id_1 = 'EMPTY'
             top_assembly_data = {

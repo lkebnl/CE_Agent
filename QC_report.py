@@ -110,16 +110,16 @@ class QC_reports:
         output_pdf_path = fdir + '/report.pdf'
         png_files = [f for f in os.listdir(fdir) if f.endswith('.png')]
         c = canvas.Canvas(output_pdf_path, pagesize=letter)
-        # image_count = 0  # 记录已经处理的图像数量
-        current_page = 0  # 记录当前页数
+        # image_count = 0  # Track the number of images processed
+        current_page = 0  # Track the current page number
         for i, png_file in enumerate(png_files):
             png_path = os.path.join(fdir, png_file)
             img = Image.open(png_path)
-            # 通过 drawImage 将图像添加到 PDF 文件
+            # Add image to PDF file via drawImage
             remainder = i % 4
             c.drawImage(png_path, 0, 600 - remainder * 160, width=img.width * 160 / img.height, height=40 * 4)
             if remainder == 3:
-                c.showPage()  # 开始新的一页
+                c.showPage()  # Start a new page
             current_page += 1
         c.save()
 

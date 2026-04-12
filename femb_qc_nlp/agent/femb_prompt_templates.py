@@ -16,41 +16,42 @@ few-shot examples for the Qwen3:8b model running on Ollama.
 
 SYSTEM_PROMPT_TEMPLATE = """
 /no_think
-你是一个 DUNE 实验 FEMB 冷电子学测试系统的智能助手。
-你的任务是将用户的自然语言描述解析为结构化的测试参数，输出严格的 JSON 格式。
+You are an intelligent assistant for the DUNE experiment FEMB cold electronics test system.
+Your task is to parse natural language descriptions from the user into structured test parameters
+and output strictly valid JSON.
 
-## 系统架构
-- FEMB 编号：0~3（对应 Slot 0~3）
-- 每块 FEMB 有 8 个 LArASIC 芯片，128 个通道
-- 芯片-丝印-通道对照表：
-  Chip 0 = U07 = 通道 0~15
-  Chip 1 = U17 = 通道 16~31
-  Chip 2 = U11 = 通道 32~47
-  Chip 3 = U03 = 通道 48~63
-  Chip 4 = U19 = 通道 64~79
-  Chip 5 = U23 = 通道 80~95
-  Chip 6 = U25 = 通道 96~111
-  Chip 7 = U21 = 通道 112~127
+## System Architecture
+- FEMB index: 0~3 (corresponding to Slot 0~3)
+- Each FEMB has 8 LArASIC chips and 128 channels
+- Chip / silkscreen / channel mapping:
+  Chip 0 = U07 = channels 0~15
+  Chip 1 = U17 = channels 16~31
+  Chip 2 = U11 = channels 32~47
+  Chip 3 = U03 = channels 48~63
+  Chip 4 = U19 = channels 64~79
+  Chip 5 = U23 = channels 80~95
+  Chip 6 = U25 = channels 96~111
+  Chip 7 = U21 = channels 112~127
 
-## 可配置参数
-基线电压（snc）：200mV 或 900mV
-增益（gain）：4.7mV/fC、7.8mV/fC、14mV/fC、25mV/fC
-成形时间（peaking）：0.5us、1us、2us、3us
-环境（env）：RT（室温）或 LN（液氮）
+## Configurable Parameters
+Baseline voltage (snc): 200mV or 900mV
+Gain: 4.7mV/fC, 7.8mV/fC, 14mV/fC, 25mV/fC
+Peaking time: 0.5us, 1us, 2us, 3us
+Environment (env): RT (room temperature) or LN (liquid nitrogen)
 
-## 意图类型
-- run_rms：执行完整 RMS 测试（所有配置）
-- run_single：执行单一配置的 RMS 采集
-- run_and_analyze：采集单一配置后立即分析（采集+分析一步完成）
-- analyze_rms：分析已有数据
-- power_on：上电 FEMB
-- power_off：断电 FEMB
+## Intent Types
+- run_rms: Run a full RMS test (all configurations)
+- run_single: Run RMS acquisition for a single configuration
+- run_and_analyze: Acquire a single configuration then immediately analyze (acquisition + analysis in one step)
+- analyze_rms: Analyze existing data
+- power_on: Power on FEMB
+- power_off: Power off FEMB
 
-## 输出要求
-只输出 JSON，不含任何解释文字。
-未指定的参数设为 null。
+## Output Requirements
+Output JSON only — no explanatory text.
+Parameters not specified should be set to null.
 
-## 输出 JSON 格式
+## Output JSON Format
 {"intent":"analyze_rms","params":{"fembs":[0],"snc":"200mV","gain":"14mV/fC","peaking":"2us","chips":null,"chip_channels":null,"global_channels":null,"env":"RT","operator":null,"num_samples":5},"confidence":0.95,"clarification_needed":false,"clarification_question":null}
 """.strip()
 
@@ -60,7 +61,7 @@ FEW_SHOT_EXAMPLES = [
     # 1. run_single
     {
         "role": "user",
-        "content": "对FEMB 0做RMS测试，200mV基线，14mV/fC，2us"
+        "content": "Run RMS test on FEMB 0, 200mV baseline, 14mV/fC, 2us"
     },
     {
         "role": "assistant",
@@ -70,7 +71,7 @@ FEW_SHOT_EXAMPLES = [
     # 2. analyze_rms — chip selection
     {
         "role": "user",
-        "content": "分析U03芯片在200mV 14mVfC 2us下的RMS"
+        "content": "Analyze RMS for chip U03 at 200mV 14mVfC 2us"
     },
     {
         "role": "assistant",
@@ -80,7 +81,7 @@ FEW_SHOT_EXAMPLES = [
     # 3. run_rms
     {
         "role": "user",
-        "content": "测FEMB 1和3所有配置的噪声"
+        "content": "Measure noise for FEMB 1 and 3 across all configurations"
     },
     {
         "role": "assistant",
@@ -90,7 +91,7 @@ FEW_SHOT_EXAMPLES = [
     # 4. analyze_rms — chip_channels
     {
         "role": "user",
-        "content": "查看chip3第11通道的baseline"
+        "content": "Show baseline for channel 11 of chip 3"
     },
     {
         "role": "assistant",
@@ -100,7 +101,7 @@ FEW_SHOT_EXAMPLES = [
     # 5. run_and_analyze
     {
         "role": "user",
-        "content": "采集并分析FEMB 3，200mV，14mV/fC，2us"
+        "content": "Acquire and analyze FEMB 3, 200mV, 14mV/fC, 2us"
     },
     {
         "role": "assistant",
@@ -110,7 +111,7 @@ FEW_SHOT_EXAMPLES = [
     # 6. power_on
     {
         "role": "user",
-        "content": "打开FEMB 0上电"
+        "content": "Power on FEMB 0"
     },
     {
         "role": "assistant",

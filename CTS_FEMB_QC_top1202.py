@@ -72,7 +72,7 @@ def QC_Process(path = "D:", QC_TST_EN=None, input_info=None):
     return data_path, report_path  # badchips range from 0 to 7
 
 def confirm(prompt):
-    """简单 confirm，要求输入 confirm 才继续"""
+    """Simple confirm: requires 'confirm' input to continue"""
     while True:
         print(prompt)
         print('Enter "confirm" to continue')
@@ -85,40 +85,41 @@ def confirm(prompt):
 
 def safe_power_off(psu, current_threshold=0.2, max_attempts=5):
     """
-    自动关闭WIB电源。自动尝试 max_attempts 次，如果电流仍然偏高，
-    则进入人工确认模式并验证电流直到安全为止。
+    Automatically power off the WIB. Tries up to max_attempts times;
+    if current remains high, switches to manual confirmation mode
+    and verifies current until it is safe.
     """
     attempt = 0
     while True:
         time.sleep(1)
-        # 测量两路电流
+        # Measure both channel currents
         total_i = 0
         for ch in (1, 2):
             v, i = psu.measure(ch)
             print(f"CH{ch}: {v:.3f} V, {i:.3f} A")
             total_i += i
         print(f"Total current: {total_i:.3f} A")
-        # 尝试关断
+        # Attempt power-off
         psu.turn_off_all()
-        # 成功
+        # Success
         if total_i < current_threshold:
             print("Power is OFF successfully.")
             return True
-        # 失败 → 自动重试
+        # Failure -> auto retry
         attempt += 1
         print(f"Power off attempt {attempt}/{max_attempts} failed (current too high).")
-        # 到达最大尝试 → 人工介入
+        # Max attempts reached -> manual intervention
         if attempt >= max_attempts:
             print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print("WARNING: Auto power-off failed after several attempts.")
             print("Manual power shutdown is required.")
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-            # 人工确认模式 + 验证
+            # Manual confirmation mode + verification
             while True:
                 print("Please manually turn OFF the WIB power.")
                 com = input(Fore.YELLOW + '>> ' + Style.RESET_ALL)
                 if com.lower() == "confirm":
-                    # 验证是否真的关电
+                    # Verify power is actually off
                     v1, i1 = psu.measure(1)
                     v2, i2 = psu.measure(2)
                     if (i1 + i2) < current_threshold:
@@ -157,13 +158,13 @@ csv_file = os.path.join(ROOT_DIR, "femb_info.csv")
 csv_file_implement = os.path.join(ROOT_DIR, "femb_info_implement.csv")
 
 version = "HD"
-# 创建空的CSV文件
+# Create empty CSV file
 if not os.path.exists(technician_csv):
     with open(technician_csv, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        # 写入表头（可根据需要修改）
+        # Write header row (modify as needed)
         writer.writerow(['TechnicianID', 'Lingyun Ke'])
-        # 写入一些示例数据
+        # Write some example data
         writer.writerow(['test_site', 'BNL'])
         writer.writerow(['top_path', '/home/dune/'])
         writer.writerow(['Email', 'LKE@BNL.GOV'])
@@ -193,17 +194,17 @@ def get_email():
         email2 = input('Please input again to confirm: \n'
                        + Fore.YELLOW + '>> ' + Style.RESET_ALL)
 
-        # 检查是否含 @
+        # Check for '@'
         if "@" not in email1:
             print(Fore.RED + "❌ Invalid email: missing '@' symbol!" + Style.RESET_ALL)
             continue
 
-        # 检查是否一致
+        # Check that both entries match
         if email1 != email2:
             print(Fore.RED + "❌ The two inputs do not match, please try again!" + Style.RESET_ALL)
             continue
 
-        # 都通过
+        # Both checks passed
         print(Fore.GREEN + "✔ Email confirmed!" + Style.RESET_ALL)
         return email1
 receiver = get_email()
@@ -330,7 +331,7 @@ if 1 in state_list:
                 break
                 print('ID wrong, please scan ID again')
         if 'exit_outer' in locals() and exit_outer:
-            break  # 真正跳出外层 while
+            break  # Break out of the outer while loop
 
 
 
@@ -422,7 +423,7 @@ if 1 in state_list:
                 break
                 print('ID wrong, please scan ID again')
         if 'exit_outer' in locals() and exit_outer:
-            break  # 真正跳出外层 while
+            break  # Break out of the outer while loop
 
     # pop03
     print("         Step 1.24 Continue assembly the CE box into the Top Slot.")
@@ -632,7 +633,7 @@ if 3 in state_list:
                     for ch in (1, 2):
                         v, i = psu.measure(ch)
                         print(f"CH{ch}: {v:.3f} V, {i:.3f} A")
-                        total_i += i  # 累加电流
+                        total_i += i  # Accumulate current
                     print(f"Total current: {total_i:.3f} A")
                     psu.turn_off_all()
                     if total_i < 0.2:
@@ -870,7 +871,7 @@ if 5 in state_list:
     print("=============     [takes < 300s]                         ============")
     print("=====================================================================")
     inform = cts.read_csv_to_dict(csv_file_implement, 'RT')
-    # Final Checkout 选项
+    # Final Checkout options
     while True:
         print("\nEnter 'y' to continue")
         print("Enter 'e' to exit")
@@ -933,10 +934,10 @@ if 5 in state_list:
             print("\033[94m" + "=============     Please Power Off the WIB!  ============" + "\033[0m")
             print("\033[35m" + "=========================================================" + "\033[0m")
 
-            # 自动 / 人工 power off（已合并）
+            # Automatic / manual power off (combined)
             safe_power_off(psu)
 
-            break  # 结束 Phase 4 主循环
+            break  # End Phase 4 main loop
 
 
     # pop15
@@ -964,7 +965,7 @@ if 6 in state_list:
         image_path=os.path.join(ROOT_DIR, "GUI", "output_pngs", "16.png")
     )
 
-    # Helper: 返回正确的图片路径
+    # Helper: Return the correct image path
     def get_cebox_image(version):
         """Return image path for CE box disassembly based on VD / HD."""
         return os.path.join(
@@ -1027,8 +1028,8 @@ paths = [
 
 def check_fault_files(paths, show_p_files=False):
 
-    f_files = []   # 带 _F_ 的文件
-    p_files = []   # 带 _P_ 的文件
+    f_files = []   # Files containing '_F_'
+    p_files = []   # Files containing '_P_'
 
     for path in paths:
         if not os.path.isdir(path):
@@ -1041,16 +1042,16 @@ def check_fault_files(paths, show_p_files=False):
                 elif "_P_" in file:
                     p_files.append(os.path.join(root, file))
 
-    # 如果没有 _F_ 文件 → 判定 PASS
+    # No '_F_' files -> PASS
     if not f_files:
-        print("Result：The Group PASS")
+        print("Result: The Group PASS")
         if show_p_files:
-            print("\n包含 '_P_' 的文件：")
+            print("\nFiles containing '_P_':")
             for pf in p_files:
                 print(pf)
         return
 
-    # 有 _F_ 文件 → 判断是否有故障
+    # '_F_' files present -> check for faults
     print("False test Found")
     for ff in f_files:
         print(ff)
@@ -1060,21 +1061,21 @@ def check_fault_files(paths, show_p_files=False):
         try:
             with open(ff, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
-                # 判断是否有故障标记（根据你实际情况调整）
+                # Check for fault markers (adjust based on actual content)
                 if "fault" in content.lower() or "error" in content.lower():
                     fault_found = True
                     break
         except Exception as e:
-            print(f"无法读取文件：{ff}, 错误：{e}")
+            print(f"Cannot read file: {ff}, error: {e}")
 
     if fault_found:
-        print("\n结果：FAIL（'_F_' 文件中检测到故障）")
+        print("\nResult: FAIL (fault detected in '_F_' files)")
     else:
-        print("\n结果：PASS（'_F_' 文件中未检测到故障）")
+        print("\nResult: PASS (no fault detected in '_F_' files)")
 
-    # 如果需要打印 P 文件
+    # Print P files if requested
     if show_p_files:
-        print("\n包含 '_P_' 的文件：")
+        print("\nFiles containing '_P_':")
         for pf in p_files:
             print(pf)
 check_fault_files(paths, show_p_files=True)
@@ -1082,18 +1083,18 @@ check_fault_files(paths, show_p_files=True)
 
 
 def close_terminal():
-    # 当前进程
+    # Current process
     p = psutil.Process(os.getpid())
 
-    # 逐层向上找到终端窗口进程
+    # Walk up the process tree to find the terminal window process
     while True:
         parent = p.parent()
         if parent is None:
             break
 
-        # GNOME Terminal 常见名称
+        # Common GNOME Terminal process names
         if parent.name() in ["gnome-terminal-server", "gnome-terminal", "konsole", "xfce4-terminal"]:
-            # 关闭终端窗口
+            # Close the terminal window
             os.kill(parent.pid, signal.SIGTERM)
             break
 

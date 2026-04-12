@@ -14,17 +14,17 @@ import QC_components.csv_style as csv_style
 import numpy as np
 
 def dict_to_markdown_table(dictionary, KEY = "KEY", VALUE = "RECORD"):
-    # 获取字典的键和值
+    # Get dictionary keys and values
     keys = list(dictionary.keys())
     values = list(dictionary.values())
 
     if VALUE == "PWRVALUE":
-        # 构建表格头部
+        # Build table header
         table = "| {} | {} |\n| --- | --- | --- | --- | --- |\n".format(KEY, " | | | ")
         for key, value in zip(keys, values):
             table += f"| {key} | {value} |\n"
     elif VALUE == "RMS":
-        # 构建表格头部
+        # Build table header
         table = "| | {} |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n".format(" | | | | | |")
         for key, value in zip(keys, values):
             table += f"| {key} | {value} |\n"

@@ -17,7 +17,7 @@ def dict_to_html_table(dictionary, KEY="KEY", VALUE="RECORD"):
     values = list(dictionary.values())
     html = "<table border='1' style='border-collapse: collapse;'>"
     if VALUE == "PWRVALUE":
-        # 確認是 list 的形式 → 使用多欄 table 輸出
+        # Confirm the value is a list → output as multi-column table
         max_len = max(len(v) if isinstance(v, list) else 1 for v in values)
         html += f"<tr><th>{KEY}</th>" + "".join(f"<th>CH{i}</th>" for i in range(max_len)) + "</tr>\n"
 
@@ -28,7 +28,7 @@ def dict_to_html_table(dictionary, KEY="KEY", VALUE="RECORD"):
                 html += f"<tr><td>{key}</td><td colspan='{max_len}'>{value}</td></tr>\n"
 
     elif VALUE == "MonPath":
-    # 多欄表格：KEY 是行名，每個 value 是 list，顯示為一整列
+    # Multi-column table: KEY is the row name, each value is a list displayed as a full row
         max_len = max(len(v) if isinstance(v, list) else 1 for v in values)
         html += f"<tr><th>{KEY}</th>" + "".join(f"<th>CH{i}</th>" for i in range(max_len)) + "</tr>\n"
         for key, value in zip(keys, values):
@@ -90,7 +90,7 @@ def final_report(datareport, fembs, fembNo, Rail=True):
     for ifemb in fembs:
         femb_id = "FEMB ID {}".format(fembNo['femb%d' % ifemb])
 
-        # 根据Rail变量确定需要检查的日志列表
+        # Determine the list of logs to check based on Rail variable
         if Rail:
             dict_list = [
                 log.report_log021, log.report_log03, log.report_log04, log.report_log051,
@@ -105,15 +105,15 @@ def final_report(datareport, fembs, fembNo, Rail=True):
 
         issue_note = ""
         if all_true[femb_id]:
-            # 若所有测试通过，则标记为绿色通过状态
+            # If all tests pass, mark with green pass status
             summary = "<span style='color: green;'>" + "FEMB SN {}\t      PASS\t  CHECKOUT".format(fembNo['femb%d' % ifemb]) + "</span>"
             note = "### Here is the Summary"
             status = 'P'
         else:
-            # 若存在测试失败，则标记为红色失败状态，并输出问题详情
+            # If tests failed, mark with red fail status and output issue details
             print(femb_id)
             summary = "<span style='color: red;'>" + "femb id {}\t      faild\t checkout".format(fembNo['femb%d' % ifemb]) + "</span>"
-            status = 'P'  # 注意：此处原代码为'P'，可能是笔误，应检查是否应设为'F'
+            status = 'P'  # Note: original code had 'P' here, possibly a typo; check if should be 'F'
 
             for dict in dict_list:
                 if dict[femb_id]["Result"] == False:
@@ -127,15 +127,15 @@ def final_report(datareport, fembs, fembNo, Rail=True):
             file.write('<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<title>FEMB Report</title>\n</head>\n<body>\n')
             file.write('<br><br>\n')
 
-            # Summary（带颜色的标题）
+            # Summary (with colored title)
             file.write(f'<h1>{summary}</h1>\n')
             file.write('<br>\n<br>\n')
 
-            # Part 01：输入信息标题
+            # Part 01: Input information heading
             Head01 = '<h3>PART 01 INPUT INFORMATION</h3>\n'
             file.write(Head01)
 
-            # 使用HTML版本的表格写入 input info
+            # Write input info using HTML table format
             info = dict_to_html_table(log.report_log01["Detail"], VALUE="Horizontal")
             file.write(info + '<br>\n')
 
@@ -146,15 +146,15 @@ def final_report(datareport, fembs, fembNo, Rail=True):
             text_line = "COLDATA_SN_CD1: {}".format(log.report_log00[femb_id]["COLDATA_SN_CD1"])
             file.write(text_line + '<br>\n')
 
-            # Note（问题详情 or 通用说明）
+            # Note (issue details or general notes)
             file.write('<div>\n' + note.replace('###', '<h3>').replace('\n', '<br>\n') + '\n</div>\n')
 
-            # 分割线
+            # Divider line
             file.write('<hr>\n')
 
             file.write('</body>\n</html>\n')
 
-            # 02 打印 <初始测试结果>
+            # 02 Print <initial test results>
             if (log.report_log021[femb_id]["Result"] == True) and (log.report_log03[femb_id]["Result"] == True):
                 Head02 = '<h3><span style="color: green;">PART 02 POR Measurement &nbsp;&nbsp; &lt; Pass &gt;</span></h3>\n'
             else:
@@ -162,21 +162,21 @@ def final_report(datareport, fembs, fembNo, Rail=True):
 
             file.write(Head02)
 
-            # 写入 Initial Current Measurement 的标题
+            # Write Initial Current Measurement heading
             file.write(f'<h4>{log.report_log02["ITEM"]}</h4>\n')
 
-            # 转换表格为 HTML 表格格式
+            # Convert table to HTML table format
             info = dict_to_html_table(log.report_log02[femb_id], KEY="2.1 Initial Current Measurement", VALUE="PWRVALUE")
             file.write(info + '<br>\n')
 
-            # 写入 Initial Register Check 的标题
+            # Write Initial Register Check heading
             file.write(f'<h4>{log.report_log03["ITEM"]}</h4>\n')
 
-            # 转换表格为 HTML 表格格式
+            # Convert table to HTML table format
             info = dict_to_html_table(log.report_log03[femb_id], KEY="Initial Register Check", VALUE="Horizontal")
             file.write(info + '<br>\n')
 
-            # 03 打印 <SE OFF RMS, PED, Pulse, Power Current, Power Rail>
+            # 03 Print <SE OFF RMS, PED, Pulse, Power Current, Power Rail>
             if Rail:
                 if (log.report_log04[femb_id]["Result"] == True) and (log.report_log051[femb_id]["Result"] == True) and (log.report_log061[femb_id]["Result"] == True):
                     Head03 = '<h3><span style="color: green;">PART 03 SE OFF Measurement &nbsp;&nbsp; &lt; Pass &gt;</span></h3>\n'
@@ -190,34 +190,34 @@ def final_report(datareport, fembs, fembNo, Rail=True):
 
             file.write(Head03)
 
-            # 写入 SE Noise Measurement 标题
+            # Write SE Noise Measurement heading
             file.write(f'<h4>{log.report_log04["ITEM"]}</h4>\n')
 
-            # 噪声图像插入 (ped + rms)
+            # Noise image insertion (ped + rms)
             file.write('<div>\n')
             file.write('<img src="./ped_Raw_SE_200mVBL_14_0mVfC_2_0us_0x00.png" alt="ped" style="max-width: 45%; margin-right: 10px;">\n')
             file.write('<img src="./rms_Raw_SE_200mVBL_14_0mVfC_2_0us_0x00.png" alt="rms" style="max-width: 45%;">\n')
             file.write('</div><br>\n')
 
-            # 表格输出：SE Noise Measurement
+            # Table output: SE Noise Measurement
             info = dict_to_html_table(log.report_log04[femb_id], KEY="3.1 Noise Measurement  200 mVBL  14 mV/fC  2 us", VALUE="VALUE")
             file.write(info + '<br>\n')
 
-            # 写入 SE Current Measurement 标题
+            # Write SE Current Measurement heading
             file.write(f'<h4>{log.report_log05["ITEM"]}</h4>\n')
             info = dict_to_html_table(log.report_log05[femb_id], KEY="3.2 SE OFF Power Measurement", VALUE="PWRVALUE")
             file.write(info + '<br>\n')
 
-            # 若包含 Rail 测试，写入 Power Rail 信息
+            # If Rail test included, write Power Rail info
             if Rail:
                 file.write(f'<h4>{log.report_log06["ITEM"]}</h4>\n')
                 info = dict_to_html_table(log.report_log06[femb_id], KEY="3.3 SE OFF LDO Measurement / mV", VALUE="Horizontal")
                 file.write(info + '<br>\n')
 
-            # 写入 Pulse Response 测试项
+            # Write Pulse Response test item
             file.write(f'<h4>{log.report_log07["ITEM"]}</h4>\n')
 
-            # Pulse 图像插入
+            # Pulse image insertion
             file.write('<div>\n')
             file.write('<img src="./pulse_Raw_SE_900mVBL_14_0mVfC_2_0us_0x10.bin.png" alt="pulse response" style="max-width: 90%;">\n')
             file.write('</div><br>\n')
@@ -225,7 +225,7 @@ def final_report(datareport, fembs, fembNo, Rail=True):
             info = dict_to_html_table(log.report_log07[femb_id], KEY="3.4 SE OFF Pulse Response [900mV 14mV/fC 2us]", VALUE="VALUE")
             file.write(info + '<br>\n')
 
-            # 04 打印 <DIFF RMS, PED, Pulse, Power Current, Power Rail>
+            # 04 Print <DIFF RMS, PED, Pulse, Power Current, Power Rail>
             if Rail:
                 if (log.report_log08[femb_id]["Result"] == True) and (log.report_log091[femb_id]["Result"] == True) and (log.report_log101[femb_id]["Result"] == True):
                     Head04 = '<h3><span style="color: green;">PART 04 DIFF Measurement &nbsp;&nbsp; &lt; Pass &gt;</span></h3>\n'
@@ -253,7 +253,7 @@ def final_report(datareport, fembs, fembNo, Rail=True):
             info = dict_to_html_table(log.report_log09[femb_id], KEY="4.2 DIFF Power Measurement", VALUE="PWRVALUE")
             file.write(info + '<br>\n')
 
-            # 4.3 DIFF Power Rail（仅在 Rail 为 True 时写入）
+            # 4.3 DIFF Power Rail (written only when Rail is True)
             if Rail:
                 file.write(f'<h2>{log.report_log10["ITEM"]}</h2>\n')
                 info = dict_to_html_table(log.report_log10[femb_id], KEY="4.3 DIFF LDO Measurement / mV", VALUE="Horizontal")
@@ -269,10 +269,10 @@ def final_report(datareport, fembs, fembNo, Rail=True):
 
             file.write(Head05)
 
-            # 写入该项标题
+            # Write section heading
             file.write(f'<h2>{log.report_log11["ITEM"]}</h2>\n')
 
-            # 表格：监测路径测量数据
+            # Table: monitoring path measurement data
             info = dict_to_html_table(log.report_log11[femb_id], KEY="Monitor Path", VALUE="MonPath")
             file.write(info + '<br>\n')
             line = "------\n"

@@ -91,20 +91,20 @@ def save_ssh_commands(steps, config, local_data_dir, output_fname,
 
     lines = []
     lines.append("#!/bin/bash")
-    lines.append("# FEMB QC SSH 命令序列")
-    lines.append("# 生成时间  : {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    lines.append("# WIB 地址  : {}".format(WIB_HOST))
-    lines.append("# 基线电压  : {}".format(config.get("snc_label", "")))
-    lines.append("# 增益      : {}".format(config.get("gain_label", "")))
-    lines.append("# 成形时间  : {}".format(config.get("peaking_label", "")))
-    lines.append("# 输出文件  : {}".format(output_fname))
-    lines.append("# 本地目录  : {}".format(local_data_dir))
+    lines.append("# FEMB QC SSH Command Sequence")
+    lines.append("# Generated  : {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    lines.append("# WIB host   : {}".format(WIB_HOST))
+    lines.append("# Baseline   : {}".format(config.get("snc_label", "")))
+    lines.append("# Gain       : {}".format(config.get("gain_label", "")))
+    lines.append("# Peaking    : {}".format(config.get("peaking_label", "")))
+    lines.append("# Output file: {}".format(output_fname))
+    lines.append("# Local dir  : {}".format(local_data_dir))
     lines.append("# ──────────────────────────────────────────────────────────")
 
     # Section 0: WIB Initialisation
     if init_steps:
         lines.append("")
-        lines.append("# ── Section 0: WIB 初始化 (time sync + startup) ──────────────")
+        lines.append("# ── Section 0: WIB initialization (time sync + startup) ────────")
         for cmd, timeout in init_steps:
             lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
         if config_csv and os.path.isfile(config_csv):
@@ -117,30 +117,30 @@ def save_ssh_commands(steps, config, local_data_dir, output_fname,
     # Section 1: FEMB Power-On
     if power_steps:
         lines.append("")
-        lines.append("# ── Section 1: FEMB 上电 ─────────────────────────────────────")
+        lines.append("# ── Section 1: FEMB power-on ────────────────────────────────────")
         for cmd, timeout in power_steps:
             lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
 
     # Section 2: Atom scripts
     lines.append("")
-    lines.append("# ── Section 2: 原子脚本 (coldata_reset → autocali → fe_cfg → align → acquire) ──")
+    lines.append("# ── Section 2: Atomic scripts (coldata_reset → autocali → fe_cfg → align → acquire) ──")
     for cmd, timeout in steps:
         lines.append('ssh {} "{}"  # timeout={}s'.format(WIB_HOST, cmd, timeout))
 
     # Section 3: Pull QC data
     lines.append("")
-    lines.append("# ── Section 3: 拉取数据到本地 ───────────────────────────────────")
+    lines.append("# ── Section 3: Pull data to local machine ───────────────────────")
     lines.append('scp -r {}:{} {}'.format(WIB_HOST, WIB_QC_DIR + "/", local_data_dir))
 
     # Section 4: Clean WIB
     lines.append("")
-    lines.append("# ── Section 4: 清理 WIB 临时数据 ────────────────────────────────")
+    lines.append("# ── Section 4: Clean up WIB temporary data ─────────────────────")
     lines.append('ssh {} "rm -rf {}"'.format(WIB_HOST, WIB_QC_DIR))
 
     # Section 5: Power-off
     if power_off:
         lines.append("")
-        lines.append("# ── Section 5: FEMB 下电 ─────────────────────────────────────")
+        lines.append("# ── Section 5: FEMB power-off ───────────────────────────────────")
         lines.append('ssh {} "cd {d}; python3 top_femb_powering.py off off off off"  # timeout=60s'.format(
             WIB_HOST, d=WIB_WORKDIR))
 
@@ -149,7 +149,7 @@ def save_ssh_commands(steps, config, local_data_dir, output_fname,
     with open(fpath, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
 
-    log.info("[SSH_CMD] 命令序列已保存至: %s", fpath)
+    log.info("[SSH_CMD] Command sequence saved to: %s", fpath)
     return fpath
 
 
@@ -889,7 +889,7 @@ def run_single_config(slots, snc, sg0, sg1, st0, st1, mode="SE",
         config_csv=config_csv,
         power_off=do_power,
     )
-    log.info("[run_single_config] SSH命令已保存: %s", cmd_file)
+    log.info("[run_single_config] SSH command file saved: %s", cmd_file)
 
     # ── Step 0: WIB initialisation ─────────────────────────────────────────────
     if do_init:

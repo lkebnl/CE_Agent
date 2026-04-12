@@ -160,7 +160,7 @@ class FEMBNLAgent:
                     "intent":  "unknown",
                     "params":  {},
                     "result":  {},
-                    "summary": "已取消。",
+                    "summary": "Cancelled.",
                 }
 
         # Dispatch
@@ -350,7 +350,7 @@ class FEMBNLAgent:
 
         # Merge summaries
         analysis["summary"] = (
-            "[采集] {}\n[分析] {}".format(
+            "[Acquire] {}\n[Analyze] {}".format(
                 acq.get("summary", ""),
                 analysis.get("summary", ""),
             )

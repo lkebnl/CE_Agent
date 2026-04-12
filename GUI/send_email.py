@@ -115,7 +115,7 @@ def send_email_with_attachment(sender_email, sender_password, receiver_email, su
         except:
             pass
 
-# 使用示例
+# Usage example
 # sender = "bnlr216@gmail.com"
 # password = "vvef tosp minf wwhf"
 # receiver = "lke@bnl.gov"

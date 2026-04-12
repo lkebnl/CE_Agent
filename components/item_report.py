@@ -22,33 +22,33 @@
 # import fitz  # PyMuPDF
 #
 # def merge_pdfs(input_paths, output_path):
-#     # 创建 PdfWriter 对象来写入合并后的PDF
+#     # Create a PdfWriter object for writing the merged PDF
 #     pdf_writer = fitz.open()
 #
 #     try:
-#         # 遍历输入的PDF文件路径
+#         # Iterate over the input PDF file paths
 #         for path in input_paths:
-#             # 打开每个PDF文件
+#             # Open each PDF file
 #             pdf_document = fitz.open(path)
 #
-#             # 遍历每一页，将其添加到 PdfWriter 对象中
+#             # Iterate over each page and add it to the PdfWriter object
 #             for page_num in range(pdf_document.page_count):
 #                 page = pdf_document[page_num]
 #                 pdf_writer.insert_pdf(pdf_document, from_page=page_num, to_page=page_num, start_at=pdf_writer.page_count)
 #
-#         # 保存合并后的PDF到输出文件
+#         # Save the merged PDF to the output file
 #         pdf_writer.save(output_path)
 #
 #         print(f'Success Merge Report to {output_path}')
 #
 #     except Exception as e:
-#         print(f'发生错误: {str(e)}')
+#         print(f'Error occurred: {str(e)}')
 #
 #     finally:
-#         # 关闭所有打开的PDF文件
+#         # Close all opened PDF files
 #         pdf_writer.close()
 #
-# # 指定输入PDF文件的路径列表
+# # Specify the list of input PDF file paths
 #
 #
 # def Gather_Report(datadir):
@@ -68,10 +68,10 @@
 #
 #     input_pdf_paths = [item1, item6_1, item6_2, item6_3, item6_4, item7, item8, item9, item3, item4, item5]
 #
-#     # 指定输出PDF文件的路径
+#     # Specify the output PDF file path
 #     output_pdf_path = datadir + '/temp_report.pdf'
 #
-#     # 调用函数以合并PDF文件
+#     # Call the function to merge PDF files
 #     merge_pdfs(input_pdf_paths, output_pdf_path)
 #
 #

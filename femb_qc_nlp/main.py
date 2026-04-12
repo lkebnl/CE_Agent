@@ -11,7 +11,7 @@ FEMB QC Natural Language Driven System — Main Entry Point
 
 Usage:
   python3 main.py                    # Interactive mode
-  python3 main.py "分析FEMB 0的RMS"  # Single-shot execution
+  python3 main.py "Analyze RMS for FEMB 0"  # Single-shot execution
   python3 main.py --phase1           # Run full item-5 directly (no NL parsing)
 """
 
@@ -52,8 +52,8 @@ def main():
 
     else:
         # Interactive loop
-        print("FEMB QC 系统已就绪。输入 'exit' 退出。")
-        print("示例：'分析FEMB 0在200mV基线14mVfC 2us下的RMS'")
+        print("FEMB QC system ready. Type 'exit' to quit.")
+        print("Example: 'Analyze RMS for FEMB 0 at 200mV baseline, 14mVfC, 2us'")
         print("-" * 60)
 
         while True:
@@ -64,13 +64,13 @@ def main():
 
             if not user_input:
                 continue
-            if user_input.lower() in ("exit", "quit", "退出"):
+            if user_input.lower() in ("exit", "quit"):
                 break
 
             result = agent.execute(user_input)
             print("\n" + result.get("summary", str(result)))
 
-    print("\n再见！")
+    print("\nGoodbye!")
 
 
 if __name__ == "__main__":

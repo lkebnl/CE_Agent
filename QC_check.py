@@ -150,7 +150,7 @@ def CHKPulse(para, para_range = 0.6, errbar=10, refmean = 0, type = 'rms'):  # a
     pulse_mean = []
     pulse_max = []
     pulse_min = []
-#   半高全宽
+#   Full Width at Half Maximum (FWHM)
     if type == 'rms':
         for ch in range(128):
             pulse_mean.append(np.mean(para_np[ch]))
@@ -193,7 +193,7 @@ def csvPulse(para, para_range = 0.4, errbar=10, refmean = 0, type = 'rms'):  # a
     pulse_mean = []
     pulse_max = []
     pulse_min = []
-#   半高全宽
+#   Full Width at Half Maximum (FWHM)
     if type == 'rms':
         for ch in range(128):
             pulse_mean.append(np.mean(para_np[ch]))

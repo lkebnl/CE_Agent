@@ -1,82 +1,82 @@
 # Markdown to HTML Converter for FEMB QC Reports
 
-## 功能说明
+## Description
 
-该工具可以将 Markdown 格式的 FEMB QC 测试报告自动转换为专业科研风格的 HTML 报告。
+This tool automatically converts FEMB QC test reports in Markdown format to professional scientific-style HTML reports.
 
-## 主要特性
+## Key Features
 
-- ✅ 自动转换 Markdown 到 HTML
-- ✅ 专业科研风格的 CSS 样式
-- ✅ 响应式设计，支持打印
-- ✅ 保留所有原始 Markdown 内容和格式
-- ✅ 支持单文件和批量转换
+- ✅ Automatic Markdown to HTML conversion
+- ✅ Professional scientific-style CSS styling
+- ✅ Responsive design with print support
+- ✅ Preserves all original Markdown content and formatting
+- ✅ Supports single-file and batch conversion
 
-## 使用方法
+## Usage
 
-### 1. 转换单个文件
+### 1. Convert a single file
 
 ```bash
 python3 QC_components/md_to_html_converter.py report_FEMB_123_t1_P_S0.md
 ```
 
-### 2. 批量转换目录中的所有报告
+### 2. Batch convert all reports in a directory
 
 ```bash
-# 转换当前目录的所有 report_FEMB_*.md 文件
-cd D:/data/temp  # 进入报告目录
+# Convert all report_FEMB_*.md files in the current directory
+cd D:/data/temp  # navigate to the report directory
 python3 /path/to/md_to_html_converter.py .
 ```
 
-### 3. 转换指定目录
+### 3. Convert a specified directory
 
 ```bash
 python3 QC_components/md_to_html_converter.py /path/to/reports/directory
 ```
 
-### 4. 直接运行（转换当前目录）
+### 4. Run directly (convert current directory)
 
 ```bash
 cd /path/to/reports
 python3 /path/to/md_to_html_converter.py
 ```
 
-## 输出文件
+## Output Files
 
-- 输入文件：`report_FEMB_123_t1_P_S0.md`
-- 输出文件：`report_FEMB_123_t1_P_S0.html`（自动生成在同一目录）
+- Input file: `report_FEMB_123_t1_P_S0.md`
+- Output file: `report_FEMB_123_t1_P_S0.html` (auto-generated in the same directory)
 
-## 集成到测试流程
+## Integration into Test Workflow
 
-可以在测试完成后自动转换报告：
+Can automatically convert reports after testing is complete:
 
 ```python
-# 在 All_Report.py 的最后添加
+# Add at the end of All_Report.py
 from QC_components.md_to_html_converter import convert_md_to_html
 
-# 生成 markdown 报告后
-fpmd = ... # markdown 文件路径
-# 自动转换为 HTML
+# After generating the markdown report
+fpmd = ... # path to markdown file
+# Automatically convert to HTML
 convert_md_to_html(fpmd)
 ```
 
-## 样式特点
+## Style Features
 
-- 🎨 专业科研风格设计
-- 📊 优化的表格显示
-- 🖼️ 自动适应的图片大小
-- 🔗 清晰的链接样式
-- ✓/✗ 醒目的通过/失败标记
-- 🖨️ 打印友好的布局
+- 🎨 Professional scientific-style design
+- 📊 Optimized table display
+- 🖼️ Auto-scaling image sizes
+- 🔗 Clean link styling
+- ✓/✗ Prominent pass/fail indicators
+- 🖨️ Print-friendly layout
 
-## 注意事项
+## Notes
 
-- 原始的 `.md` 文件不会被删除或修改
-- HTML 文件会覆盖同名的旧文件
-- 支持所有标准 Markdown 语法
-- 内嵌 HTML 标签会被保留
+- The original `.md` files will not be deleted or modified
+- HTML files will overwrite existing files with the same name
+- All standard Markdown syntax is supported
+- Embedded HTML tags are preserved
 
-## 系统要求
+## Requirements
 
 - Python 3.x
-- 无需额外依赖库（仅使用标准库）
+- No additional dependencies required (uses standard library only)

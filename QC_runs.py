@@ -1247,10 +1247,10 @@ class QC_Runs:
                print ("Error to create folder %s !!! Continue to next test........"%datadir)
                return
 
-        # 步骤1: 完全复位COLDATA和所有配置
-        self.chk.femb_cd_rst(adcspara=True)  # 确保 adcspara=True
+        # Step 1: Fully reset COLDATA and all configurations
+        self.chk.femb_cd_rst(adcspara=True)  # Ensure adcspara=True
 
-        # 步骤2: 显式恢复ADC默认配置
+        # Step 2: Explicitly restore ADC default configuration
         self.chk.adcs_paras = copy.deepcopy([
             [0x4, 0x08, 0, 0, 0xDF, 0x33, 0x89, 0x67, 0],
             [0x5, 0x08, 0, 0, 0xDF, 0x33, 0x89, 0x67, 0],
@@ -1262,15 +1262,15 @@ class QC_Runs:
             [0xB, 0x08, 0, 0, 0xDF, 0x33, 0x89, 0x67, 0],
         ])
 
-        # 步骤3: 强制标记需要重新配置ADC
+        # Step 3: Force mark ADC as needing reconfiguration
         self.chk.adc_flg = [True, True, True, True]
 
-        # 步骤4: 对所有FEMB重新配置ADC硬件
+        # Step 4: Reconfigure ADC hardware for all FEMBs
         for femb_id in self.fembs:
             # print(f"Re-configuring ADC for FEMB{femb_id}...")
             self.chk.femb_adc_cfg(femb_id)
 
-        time.sleep(0.1)  # 等待配置稳定
+        time.sleep(0.1)  # Wait for configuration to stabilize
         # print("ADC configuration reset complete.")
         # ==========================================
 

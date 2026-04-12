@@ -8,7 +8,7 @@
 # Description : Markdown-to-HTML report converter
 """
 Markdown to HTML Converter for FEMB QC Reports
-将 Markdown 格式的测试报告转换为专业科研风格的 HTML 报告
+Converts Markdown-format test reports to professional scientific-style HTML reports
 """
 
 import os
@@ -18,7 +18,7 @@ import re
 
 
 def get_html_template(title, content):
-    """生成完整的 HTML 文档，包含专业科研风格的 CSS"""
+    """Generate a complete HTML document with professional scientific-style CSS"""
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +26,7 @@ def get_html_template(title, content):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
     <style>
-        /* 专业科研风格样式 */
+        /* Professional scientific-style CSS */
         * {{
             margin: 0;
             padding: 0;
@@ -83,7 +83,7 @@ def get_html_template(title, content):
             margin: 30px 0;
         }}
 
-        /* 表格样式 */
+        /* Table styles */
         table {{
             width: 100%;
             border-collapse: collapse;
@@ -118,7 +118,7 @@ def get_html_template(title, content):
             background-color: #e8f4f8;
         }}
 
-        /* 状态标签 */
+        /* Status labels */
         .status-pass {{
             color: #27ae60;
             font-weight: bold;
@@ -134,7 +134,7 @@ def get_html_template(title, content):
             font-weight: bold;
         }}
 
-        /* 图片样式 */
+        /* Image styles */
         img {{
             max-width: 100%;
             height: auto;
@@ -145,7 +145,7 @@ def get_html_template(title, content):
             background-color: white;
         }}
 
-        /* 链接样式 */
+        /* Link styles */
         a {{
             color: #3498db;
             text-decoration: none;
@@ -157,12 +157,12 @@ def get_html_template(title, content):
             text-decoration: underline;
         }}
 
-        /* 段落 */
+        /* Paragraphs */
         p {{
             margin: 10px 0;
         }}
 
-        /* 列表 */
+        /* Lists */
         ul, ol {{
             margin: 10px 0 10px 30px;
         }}
@@ -171,7 +171,7 @@ def get_html_template(title, content):
             margin: 5px 0;
         }}
 
-        /* 代码块 */
+        /* Code blocks */
         code {{
             background-color: #f4f4f4;
             padding: 2px 6px;
@@ -192,7 +192,7 @@ def get_html_template(title, content):
             padding: 0;
         }}
 
-        /* 打印样式 */
+        /* Print styles */
         @media print {{
             body {{
                 background-color: white;
@@ -209,7 +209,7 @@ def get_html_template(title, content):
             }}
         }}
 
-        /* 颜色文本 */
+        /* Colored text */
         span[style*="color: green"] {{
             color: #27ae60 !important;
             font-weight: bold;
@@ -232,38 +232,38 @@ def get_html_template(title, content):
 
 def markdown_to_html(md_content):
     """
-    简单的 Markdown 到 HTML 转换
-    处理常见的 Markdown 语法
+    Simple Markdown to HTML converter.
+    Handles common Markdown syntax.
     """
     html = md_content
 
-    # 转换标题 (必须先处理长的，再处理短的)
+    # Convert headings (process longer patterns first)
     html = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
     html = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
     html = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
 
-    # 转换水平线
+    # Convert horizontal rules
     html = re.sub(r'^---+$', r'<hr>', html, flags=re.MULTILINE)
     html = re.sub(r'^___ +$', r'<hr>', html, flags=re.MULTILINE)
 
-    # 转换图片 ![alt](src)
+    # Convert images ![alt](src)
     html = re.sub(r'!\[([^\]]*)\]\(([^\)]+)\)', r'<img src="\2" alt="\1">', html)
 
-    # 转换链接 [text](url)
+    # Convert links [text](url)
     html = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2">\1</a>', html)
 
-    # 转换粗体 **text** 或 __text__
+    # Convert bold **text** or __text__
     html = re.sub(r'\*\*([^\*]+)\*\*', r'<strong>\1</strong>', html)
     html = re.sub(r'__([^_]+)__', r'<strong>\1</strong>', html)
 
-    # 转换斜体 *text* 或 _text_
+    # Convert italic *text* or _text_
     html = re.sub(r'\*([^\*]+)\*', r'<em>\1</em>', html)
     html = re.sub(r'_([^_]+)_', r'<em>\1</em>', html)
 
-    # 转换代码 `code`
+    # Convert inline code `code`
     html = re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
 
-    # 转换段落 (连续的非空行)
+    # Convert paragraphs (consecutive non-empty lines)
     lines = html.split('\n')
     in_paragraph = False
     result_lines = []
@@ -271,7 +271,7 @@ def markdown_to_html(md_content):
     for i, line in enumerate(lines):
         stripped = line.strip()
 
-        # 跳过已经是 HTML 标签的行
+        # Skip lines that are already HTML tags
         if stripped.startswith('<h') or stripped.startswith('<hr') or \
            stripped.startswith('<img') or stripped.startswith('<table') or \
            stripped.startswith('</table') or stripped.startswith('<div'):
@@ -285,7 +285,7 @@ def markdown_to_html(md_content):
                 in_paragraph = False
             result_lines.append(line)
         else:
-            if not in_paragraph and not stripped.startswith('|'):  # 不包裹表格
+            if not in_paragraph and not stripped.startswith('|'):  # Do not wrap table rows
                 result_lines.append('<p>')
                 in_paragraph = True
             result_lines.append(line)
@@ -300,60 +300,60 @@ def markdown_to_html(md_content):
 
 def convert_md_to_html(md_file, output_file=None):
     """
-    转换单个 Markdown 文件为 HTML
+    Convert a single Markdown file to HTML.
 
     Args:
-        md_file: Markdown 文件路径
-        output_file: 输出 HTML 文件路径 (如果为 None，则自动生成)
+        md_file: Path to the Markdown file
+        output_file: Output HTML file path (auto-generated if None)
 
     Returns:
-        输出文件路径
+        Output file path
     """
-    # 读取 Markdown 文件
+    # Read Markdown file
     with open(md_file, 'r', encoding='utf-8') as f:
         md_content = f.read()
 
-    # 提取标题 (第一个 # 标题)
+    # Extract title (first # heading)
     title_match = re.search(r'^#\s+(.+)$', md_content, re.MULTILINE)
     title = title_match.group(1) if title_match else "FEMB QC Test Report"
 
-    # 转换 Markdown 到 HTML
+    # Convert Markdown to HTML
     html_content = markdown_to_html(md_content)
 
-    # 生成完整的 HTML 文档
+    # Generate complete HTML document
     full_html = get_html_template(title, html_content)
 
-    # 确定输出文件名
+    # Determine output filename
     if output_file is None:
         output_file = os.path.splitext(md_file)[0] + '.html'
 
-    # 写入 HTML 文件
+    # Write HTML file
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(full_html)
 
-    print(f"✓ 已转换: {md_file} → {output_file}")
+    print(f"Converted: {md_file} -> {output_file}")
     return output_file
 
 
 def batch_convert(directory='.', pattern='report_FEMB_*.md'):
     """
-    批量转换目录中的 Markdown 文件
+    Batch convert Markdown files in a directory.
 
     Args:
-        directory: 要搜索的目录
-        pattern: 文件匹配模式
+        directory: Directory to search
+        pattern: File match pattern
 
     Returns:
-        转换的文件数量
+        Number of files converted
     """
     search_pattern = os.path.join(directory, pattern)
     md_files = glob.glob(search_pattern)
 
     if not md_files:
-        print(f"未找到匹配的文件: {search_pattern}")
+        print(f"No matching files found: {search_pattern}")
         return 0
 
-    print(f"找到 {len(md_files)} 个 Markdown 文件")
+    print(f"Found {len(md_files)} Markdown file(s)")
     print("=" * 60)
 
     converted_count = 0
@@ -362,29 +362,29 @@ def batch_convert(directory='.', pattern='report_FEMB_*.md'):
             convert_md_to_html(md_file)
             converted_count += 1
         except Exception as e:
-            print(f"✗ 转换失败: {md_file}")
-            print(f"  错误: {e}")
+            print(f"Conversion failed: {md_file}")
+            print(f"  Error: {e}")
 
     print("=" * 60)
-    print(f"转换完成: {converted_count}/{len(md_files)} 个文件")
+    print(f"Conversion complete: {converted_count}/{len(md_files)} file(s)")
 
     return converted_count
 
 
 def main():
-    """主函数"""
+    """Main function"""
     if len(sys.argv) > 1:
-        # 如果提供了参数，转换指定文件或目录
+        # If arguments provided, convert the specified file or directory
         arg = sys.argv[1]
         if os.path.isfile(arg):
             convert_md_to_html(arg)
         elif os.path.isdir(arg):
             batch_convert(arg)
         else:
-            print(f"错误: 文件或目录不存在: {arg}")
+            print(f"Error: File or directory does not exist: {arg}")
             sys.exit(1)
     else:
-        # 否则转换当前目录的所有报告文件
+        # Otherwise convert all report files in the current directory
         batch_convert('.')
 
 

@@ -47,7 +47,7 @@ class RigolDP800:
 
     def _release_usb_device(self):
         try:
-            # Rigol DP800的USB VID:PID
+            # Rigol DP800 USB VID:PID
             RIGOL_VID = 0x1AB1
             RIGOL_PID = 0x0E11
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
         for ch in (1, 2):
             v, i = psu.measure(ch)
             print(f"CH{ch}: {v:.3f} V, {i:.3f} A")
-            total_i += i  # 累加电流
+            total_i += i  # Accumulate current
         print(f"Total current: {total_i:.3f} A")
         psu.turn_off_all()
         if total_i < 0.2:

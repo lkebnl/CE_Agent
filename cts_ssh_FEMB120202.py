@@ -144,9 +144,9 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
     # QC_TST_EN = True
     logs = {}  # from collections import defaultdict report_log01 = defaultdict(dict)
 
-    # ============= 通用工具函数 =============
+    # ============= General utility functions =============
     def power_off_femb_channels():
-        """只关闭FEMB channel（用于重试前）"""
+        """Power off FEMB channels only (used before retry)"""
         print('Powering off FEMB channels...')
         try:
             power_off_cmd = [
@@ -159,10 +159,10 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             print(f"Error powering off FEMB channels: {e}")
 
     def shutdown_power_supply():
-        """完整关闭所有电源供应（用于最终退出）"""
+        """Fully shut down all power supplies (used for final exit)"""
         print('Shutting down ALL power supplies...')
         try:
-            # 1. 关闭所有FEMB电源
+            # 1. Power off all FEMB channels
             print('  - Powering off FEMB channels...')
             power_off_cmd = [
                 "ssh", "root@192.168.121.123",
@@ -170,11 +170,11 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             ]
             subrun(power_off_cmd, timeout=60, out=False)
 
-            # 2. 关闭Rigol电源
+            # 2. Close Rigol power supply
             print('  - Closing Rigol power supply...')
             rigol.RigolDP800().close()
 
-            # 3. 关闭WIB
+            # 3. Power off WIB
             print('  - Powering off WIB...')
             subrun(["ssh", "root@192.168.121.123", "poweroff"], check=False, out=False)
             time.sleep(5)
@@ -184,7 +184,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             print(f"Error during shutdown: {e}")
 
     def confirm_user_action(action_name, require_confirm=False):
-        """确认用户操作"""
+        """Confirm user action"""
         if require_confirm:
             confirmation = input(f"Enter 'confirm' to {action_name}: ").strip().lower()
             if confirmation == "confirm":
@@ -194,12 +194,12 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
         return True
 
     def prompt_retry_or_exit(error_context="", attempt=1, max_attempts=3):
-        """提示用户选择重试或退出（即使超过最大次数也询问）"""
+        """Prompt user to choose retry or exit (asks even after max attempts reached)"""
         print("\n" + "=" * 60)
         if error_context:
             print(Fore.RED + f"Error: {error_context}" + Style.RESET_ALL)
 
-        # 如果已经达到或超过最大尝试次数
+        # If max attempts already reached or exceeded
         if attempt >= max_attempts:
             print(Fore.RED + f"Maximum attempts ({max_attempts}) reached!" + Style.RESET_ALL)
             print("=" * 60)
@@ -207,7 +207,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             print(f"Attempt {attempt}/{max_attempts}")
             print("=" * 60)
 
-            # 根据尝试次数给出建议
+            # Give suggestion based on attempt count
             if attempt == 1:
                 print(Fore.YELLOW + "Suggestion: Check data cable connection at WIB side" + Style.RESET_ALL)
             elif attempt == 2:
@@ -229,7 +229,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             else:
                 print("Invalid input. Please enter 'r' or 'e'")
 
-    # ============= 原有变量初始化 =============
+    # ============= Original variable initialization =============
     logs['CTS_IDs'] = input_info['test_site']
     slot0 = input_info['SLOT0']
     slot1 = input_info['SLOT1']
@@ -406,10 +406,10 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             print("FAIL!")
             return None
 
-    # ========== Begin of 01 FEMB Slot Confirm (优化版) ==========================
+    # ========== Begin of 01 FEMB Slot Confirm (optimized) ==========================
 
     def check_slot_connection(slot_check_output, slot_num, slot_info):
-        """检查单个SLOT的电源连接状态"""
+        """Check the power connection status of a single SLOT"""
         slot_msg = f'SLOT#{slot_num} Power Connection Normal'
 
         if slot_msg in slot_check_output:
@@ -420,7 +420,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             return ' ', True
 
     def run_femb_powering(power_en, is_ln_mode=False):
-        """运行FEMB上电流程"""
+        """Run FEMB power-on sequence"""
         ln_result = None
 
         if is_ln_mode:
@@ -429,20 +429,20 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 "ssh", "root@192.168.121.123",
                 f"cd BNL_CE_WIB_SW_QC; python3 top_femb_powering_LN.py {power_en}"
             ]
-            ln_result = subrun(ln_command, timeout=60, out=True)  # 显示输出
+            ln_result = subrun(ln_command, timeout=60, out=True)  # display output
             time.sleep(2)
             print("FEMB Cold Power On")
         else:
             print("Warm initial")
 
-        # 执行常规上电
+        # Execute regular power-on
         command = [
             "ssh", "root@192.168.121.123",
             f"cd BNL_CE_WIB_SW_QC; python3 top_femb_powering.py {power_en}"
         ]
-        result = subrun(command, timeout=60, out=True)  # 显示输出
+        result = subrun(command, timeout=60, out=True)  # display output
 
-        # 提取stdout用于检查
+        # Extract stdout for checking
         if hasattr(result, 'stdout'):
             slot_check = result.stdout
             if isinstance(slot_check, bytes):
@@ -453,7 +453,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
         return slot_check, ln_result
 
     def run_cable_test(slot_list):
-        """运行cable测试"""
+        """Run cable test"""
         try:
             print("\n[Running Cable Test...]")
             time.sleep(1)
@@ -461,16 +461,16 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 "ssh", "root@192.168.121.123",
                 f"cd BNL_CE_WIB_SW_QC; python3 top_chkout_pls_fake_timing.py {slot_list} save 5"
             ]
-            result = subrun(command, timeout=60, out=True)  # 显示输出
+            result = subrun(command, timeout=60, out=True)  # display output
 
-            # 提取输出
+            # Extract output
             output = ""
             if hasattr(result, 'stdout'):
                 output = result.stdout
                 if isinstance(output, bytes):
                     output = output.decode('utf-8')
 
-            # 验证结果
+            # Verify result
             if "Cable Test Done" in output:
                 print(Fore.GREEN + "Cable Test PASSED" + Style.RESET_ALL)
                 return True, output
@@ -482,7 +482,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             print(f"Error during cable test: {e}")
             return False, str(e)
 
-    # 主流程：QC_TST_EN == 1
+    # Main flow: QC_TST_EN == 1
     LN_result = ""
     MAX_RETRIES = 3
 
@@ -497,21 +497,21 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
         }
 
         attempt = 0
-        while True:  # 无限循环，由用户决定何时退出
+        while True:  # infinite loop — user decides when to exit
             attempt += 1
 
             print(f"\n{datetime.now(timezone.utc)}")
             print(Fore.MAGENTA + f"SLOT Confirmation - Attempt {attempt}" + Style.RESET_ALL)
             print("=" * 60)
 
-            # ========== 步骤1: FEMB上电和SLOT检查 ==========
+            # ========== Step 1: FEMB power-on and SLOT check ==========
             print("\n[1/3] FEMB Power-On and SLOT Check...")
             SlotCheck, ln_res = run_femb_powering(power_en, is_ln_mode)
 
             if is_ln_mode and ln_res:
                 LN_result = ln_res
 
-            # 检查各SLOT连接
+            # Check each SLOT connection
             Slot_change = False
             for slot_num, (info_key, var_name) in slot_mapping.items():
                 if slot_num in slot_list:
@@ -523,46 +523,46 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                     globals()[var_name] = slot_value
                     Slot_change = Slot_change or is_changed
 
-            # SLOT连接检查失败
+            # SLOT connection check failed
             if Slot_change:
                 print(Fore.RED + "\nSLOT connection check FAILED" + Style.RESET_ALL)
                 print("Please check SLOT connections and femb_info.csv")
 
-                # 只关闭FEMB channel（不关闭Rigol和WIB）
+                # Power off FEMB channels only (do not close Rigol and WIB)
                 power_off_femb_channels()
 
-                # 询问用户（即使超过最大次数也询问）
+                # Ask user (even after max attempts)
                 choice = prompt_retry_or_exit("SLOT connection error", attempt, MAX_RETRIES)
 
                 if choice == 'retry':
                     continue
                 elif choice == 'exit':
-                    # 用户选择退出，完整关闭所有电源
+                    # User chose to exit — fully shut down all power supplies
                     shutdown_power_supply()
                     return None
 
-            # ========== 步骤2: Cable测试 ==========
+            # ========== Step 2: Cable test ==========
             print("\n[2/3] Cable Test...")
             cable_success, cable_output = run_cable_test(slot_list)
 
             if not cable_success:
-                # Cable测试失败
+                # Cable test failed
                 print(Fore.RED + "\nCable test FAILED" + Style.RESET_ALL)
 
-                # 只关闭FEMB channel（不关闭Rigol和WIB）
+                # Power off FEMB channels only (do not close Rigol and WIB)
                 power_off_femb_channels()
 
-                # 询问用户（即使超过最大次数也询问）
+                # Ask user (even after max attempts)
                 choice = prompt_retry_or_exit("Cable connection error", attempt, MAX_RETRIES)
 
                 if choice == 'retry':
                     continue
                 elif choice == 'exit':
-                    # 用户选择退出，完整关闭所有电源
+                    # User chose to exit — fully shut down all power supplies
                     shutdown_power_supply()
                     return None
 
-            # ========== 步骤3: 关闭FEMB电源 ==========
+            # ========== Step 3: Power off FEMB ==========
             print("\n[3/3] Powering off all FEMBs...")
             command = [
                 "ssh", "root@192.168.121.123",
@@ -570,7 +570,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             ]
             subrun(command, timeout=60, out=False)
 
-            # ========== 成功 ==========
+            # ========== Success ==========
             print(f"\n{datetime.now(timezone.utc)}")
             print(Fore.GREEN + "  ✓ SLOT Confirmation SUCCESS!" + Style.RESET_ALL)
 
@@ -578,12 +578,12 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             if LN_result:
                 logs['LN_result'] = LN_result
 
-            break  # 成功，退出循环
+            break  # Success — exit loop
 
     # ========== End of 01 FEMB Slot Confirm ==========================
 
-    # ========== Begin of 02 FEMB Checkout (优化版) ==========================
-    # 配置常量
+    # ========== Begin of 02 FEMB Checkout (optimized) ==========================
+    # Configuration constants
     class Config:
         WIB_HOST = "root@192.168.121.123"
         WIB_CHK_DIR = "/home/root/BNL_CE_WIB_SW_QC/CHK/"
@@ -594,7 +594,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
         VALID_SLOTS = ['0', '1', '2', '3']
 
     class CheckoutResult:
-        """封装checkout结果"""
+        """Encapsulates checkout result"""
 
         def __init__(self, success, message, data_dir=None):
             self.success = success
@@ -613,10 +613,10 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             self.is_ln_mode = 'LN' in tmp
 
         def run(self):
-            """主执行流程（带无限重试机制，由用户决定）"""
+            """Main execution flow (with unlimited retry — user decides)"""
             attempt = 0
 
-            while True:  # 无限循环，由用户决定何时退出
+            while True:  # infinite loop — user decides when to exit
                 attempt += 1
 
                 print(f"\n{datetime.now(timezone.utc)}")
@@ -628,59 +628,59 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 if result.success:
                     return result
 
-                # 特殊情况：验证失败时用户选择了重试，不需要再次询问
+                # Special case: user chose retry after validation failure — no need to ask again
                 if result.message == "User requested retry from validation":
                     continue
 
-                # 失败处理
+                # Failure handling
                 print(Fore.RED + f"\nCheckout FAILED: {result.message}" + Style.RESET_ALL)
 
-                # 特殊处理：LN模式第一次失败自动重试
+                # Special handling: LN mode auto-retry on first failure
                 if self.is_ln_mode and attempt == 1:
                     print(Fore.YELLOW + "LN mode: Automatic retry (1st attempt)" + Style.RESET_ALL)
                     continue
 
-                # 询问用户（即使超过最大次数也询问）
+                # Ask user (even after max attempts)
                 choice = prompt_retry_or_exit(result.message, attempt, Config.MAX_RETRIES)
 
                 if choice == 'retry':
                     continue
                 elif choice == 'exit':
-                    # 只有用户选择退出时才关闭所有电源
+                    # Only shut down all power when user chooses exit
                     shutdown_power_supply()
                     return CheckoutResult(False, "User cancelled")
 
         def _execute_checkout(self):
-            """执行一次完整的checkout流程"""
+            """Execute one complete checkout flow"""
             try:
-                # 1. 清理WIB端数据
+                # 1. Clean WIB-side data
                 print("\n[1/5] Cleaning WIB data...")
                 self._cleanup_wib_data()
 
-                # 2. 运行checkout测试
+                # 2. Run checkout test
                 print("\n[2/5] Running FEMB test...")
                 test_result = self._run_femb_test()
                 if not test_result:
                     return CheckoutResult(False, "Test execution failed")
 
-                # 3. 传输数据
+                # 3. Transfer data
                 print("\n[3/5] Transferring data to PC...")
                 data_dirs = self._transfer_data(test_result)
                 if not data_dirs:
                     return CheckoutResult(False, "Data transfer failed")
 
-                # 4. 验证结果
+                # 4. Validate results
                 print("\n[4/5] Validating results...")
                 validation = self._validate_checkout(test_result.stdout)
 
-                # 5. 打开报告
+                # 5. Open reports
                 print("\n[5/5] Opening reports...")
                 self._open_reports(data_dirs['raw'])
 
-                # 清理WIB端数据
+                # Clean up WIB-side data
                 self._cleanup_wib_data()
 
-                # 根据验证结果处理
+                # Handle outcome based on validation result
                 if validation['all_passed']:
                     self._save_logs(data_dirs['raw'])
                     print(f"\n{datetime.now(timezone.utc)}")
@@ -693,7 +693,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 return CheckoutResult(False, f"Exception: {str(e)}")
 
         def _cleanup_wib_data(self):
-            """清理WIB端的数据目录"""
+            """Remove WIB-side data directory"""
             command = [
                 "ssh", "-o", "BatchMode=yes", Config.WIB_HOST,
                 f"rm -rf {Config.WIB_CHK_DIR}"
@@ -704,7 +704,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 print('Cleanup timeout, continuing...')
 
         def _run_femb_test(self):
-            """运行FEMB测试"""
+            """Run FEMB test"""
             print(f"\033[96m Initialization {self.tmp} Temperature Checkout\033[0m")
 
             command = [
@@ -720,17 +720,17 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 FEMB_list
             ])
 
-            result = subrun(command, timeout=Config.CHECKOUT_TIMEOUT, user_input=user_input, out=True)  # 显示输出
+            result = subrun(command, timeout=Config.CHECKOUT_TIMEOUT, user_input=user_input, out=True)  # display output
 
             if result is None:
                 return None
 
-            # 记录日志
+            # Record logs
             self.logs["QC_TestItemID_000"] = [command, result.stdout]
             self.logs['wib_raw_dir'] = Config.WIB_CHK_DIR
             self.logs['checkout_terminal'] = result.stdout
 
-            # 检查测试结果
+            # Check test result
             if any(keyword in result.stdout for keyword in ["Pass", "is on", "Turn All FEMB off"]):
                 return result
             else:
@@ -739,8 +739,8 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 return None
 
         def _transfer_data(self, test_result):
-            """传输数据到PC"""
-            # 创建目标目录
+            """Transfer data to PC"""
+            # Create destination directories
             time_prefix = self.current_time.strftime("%Y_%m/%d_%H_%M_%S")
             base_name = f"Time_{time_prefix}_CTS_{self.logs['CTS_IDs']}{self.savename}"
 
@@ -750,7 +750,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             self.logs['PC_rawdata_root'] = os.path.dirname(raw_dir)
             self.logs['PC_rawreport_root'] = os.path.dirname(report_dir)
 
-            # 创建目录
+            # Create directories
             for directory in [raw_dir, report_dir]:
                 try:
                     os.makedirs(directory, exist_ok=True)
@@ -758,18 +758,18 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                     print(f"Error creating folder {directory}: {e}")
                     return None
 
-            # SCP传输
+            # SCP transfer
             wib_src = f"{Config.WIB_HOST}:{Config.WIB_CHK_DIR}"
             wib_report_src = f"{Config.WIB_HOST}:{Config.WIB_REPORT_DIR}"
 
-            # 传输报告
+            # Transfer reports
             self._scp_transfer(wib_report_src, report_dir)
 
-            # 传输原始数据
+            # Transfer raw data
             if not self._scp_transfer(wib_src, raw_dir):
                 return None
 
-            # 如果是LN测试，保存额外数据
+            # If LN test, save additional data
             if self.is_ln_mode and LN_result:
                 self._save_ln_data(report_dir)
 
@@ -778,14 +778,14 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             return {'raw': raw_dir, 'report': report_dir}
 
         def _scp_transfer(self, src, dst):
-            """执行SCP传输"""
+            """Execute SCP transfer"""
             command = [f"scp -r {src} {dst}"]
             result = subrun(command, timeout=Config.SCP_TIMEOUT, check=False, out=False)
             time.sleep(0.01)
             return result is not None
 
         def _save_ln_data(self, report_dir):
-            """保存LN测试数据"""
+            """Save LN test data"""
             fname = os.path.join(report_dir, "LN_first_power_output.txt")
             if hasattr(LN_result, 'stdout'):
                 ln_output = LN_result.stdout
@@ -796,7 +796,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                 f.write(ln_output)
 
         def _validate_checkout(self, stdout):
-            """验证每个slot的checkout结果"""
+            """Validate checkout result for each slot"""
             validation = {'all_passed': True, 'failed_slots': []}
 
             for slot in Config.VALID_SLOTS:
@@ -814,7 +814,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
             return validation
 
         def _open_reports(self, data_dir):
-            """打开markdown报告文件"""
+            """Open markdown report files"""
             for root, dirs, files in os.walk(data_dir):
                 for file in files:
                     if file.endswith('.md') and any(f'N{i}.md' in file for i in range(4)):
@@ -822,7 +822,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                         webbrowser.open(f'file://{file_path}')
 
         def _handle_validation_failure(self, validation, data_dir):
-            """处理验证失败的情况"""
+            """Handle validation failure"""
             print("\n" + "=" * 60)
             print(Fore.RED + f"Failed slots: {', '.join(validation['failed_slots'])}" + Style.RESET_ALL)
             print("=" * 60)
@@ -841,7 +841,7 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
 
                 elif choice == 'r':
                     if confirm_user_action("retry"):
-                        # 返回特殊消息，告诉 run() 方法直接重试，不要再次询问
+                        # Return special message telling run() to retry immediately without prompting again
                         return CheckoutResult(False, "User requested retry from validation")
 
                 elif choice == 'e':
@@ -852,13 +852,13 @@ def cts_ssh_FEMB(root="D:/FEMB_QC/", QC_TST_EN=0, input_info=None):
                     print("Invalid input. Please enter 'c', 'r', or 'e'")
 
         def _save_logs(self, data_dir):
-            """保存日志文件"""
+            """Save log files"""
             filename = os.path.join(data_dir, 'logs.txt')
             with open(filename, 'w') as f:
                 pprint.pprint(self.logs, stream=f)
             print(f"Logs saved to {filename}")
 
-    # 使用方式
+    # Usage
     if QC_TST_EN == 2:
         checkout = FEMBCheckout(
             slot_list=slot_list,
